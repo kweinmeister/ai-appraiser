@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Item Valuation</title>
+    <link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet" />
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body class="bg-gray-100 h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded shadow-md w-full max-w-4xl">
+        <div class="bg-gradient-to-r from-green-400 to-green-700 text-white p-4 rounded-t-lg text-center">
+            <h1 class="text-4xl font-bold tracking-wide">Valuator</h1>
+            <p class="text-lg mt-2">Estimate the value of your items quickly and easily.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-4 mt-4">
+            <div>
+                <div class="p-4 bg-gray-100 rounded-lg">
+                    <h2 class="text-lg font-semibold mb-2 text-center">Item Input</h2>
+                    <div id="image-preview" class="mt-4 flex justify-center">
+                        <!-- Image preview and URL will be displayed here -->
+                    </div>
+                    <div class="mb-4">
+                        <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white sr-only" for="image_file">Upload file</label>
+                        <input class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" id="image_file" name="image_file" type="file">
+                        
+                        <button type="button" onclick="uploadImage()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-2">Upload Image</button>
+                    </div>
+
+                    <form id="valuation-form" hx-post="/value" hx-target="#results" hx-swap="innerHTML">
+                        <input type="hidden" id="image_url" name="image_url" value="">
+                        <div class="mb-4">
+                            <label for="description" class="block text-gray-700 text-sm font-bold mb-2">Description (optional):</label>
+                            <input type="text" id="description" name="description" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        </div>
+                        <button type="submit" hx-disable-element="this" hx-vals='{"image_url": "#image_url"}' onclick="if (document.getElementById('image_url').value === '') { alert('Please upload an image first.'); return false; }" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                            Estimate Value
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div>
+                <div class="p-4 bg-gray-100 rounded-lg">
+                    <h2 class="text-lg font-semibold mb-2 text-center">Valuation Results</h2>
+                    <div id="results-container" class="mt-4" style="position: relative;">
+                        <div id="results">
+                            <!-- Valuation results will be displayed here -->
+                        </div>
+                        <div id="spinner" class="hidden absolute inset-0 flex items-center justify-center pt-32">
+                            <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('valuation-form').addEventListener('htmx:beforeRequest', function() {
+            document.getElementById('spinner').classList.remove('hidden');
+        });
+
+        document.getElementById('valuation-form').addEventListener('htmx:afterRequest', function() {
+            document.getElementById('spinner').classList.add('hidden');
+        });
+    </script>
+    <script>
+        async function uploadImage() {
+            const fileInput = document.getElementById('image_file');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select an image file.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image_file', file);
+
+            try {
+                const response = await fetch('/upload-image', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const html = await response.text();
+                    document.getElementById('image-preview').innerHTML = html;
+
+                    // Extract the image URL from the response HTML
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const imageUrl = doc.querySelector('img').src;
+
+                    // Set the hidden input's value
+                    document.getElementById('image_url').value = imageUrl;
+                    document.getElementById('description').value = '';
+                    document.getElementById('results').innerHTML = '';
+
+                } else {
+                    alert('Error uploading image: ' + response.status);
+                }
+            } catch (error) {
+                alert('Error uploading image: ' + error);
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
+</body>
+</html>
