@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from google.cloud import storage
 from google import genai
 from google.genai.types import (
@@ -13,6 +13,7 @@ import os
 import datetime
 from mimetypes import guess_type
 from fastapi.middleware.cors import CORSMiddleware
+import base64
 
 # --- Configuration ---
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
@@ -65,8 +66,7 @@ def upload_image_to_gcs(file: UploadFile) -> str:
 
     try:
         blob.upload_from_file(file.file, content_type=file.content_type)
-        blob.make_public()
-        return blob.public_url
+        return f"gs://{CLOUD_STORAGE_BUCKET_NAME}/{filename}"
     except Exception as e:
         print(e)
         raise HTTPException(
@@ -96,7 +96,6 @@ Return a text response only, not an executable code response.
 """
     google_search_tool = Tool(google_search=GoogleSearch())
     config_with_search = GenerateContentConfig(tools=[google_search_tool])
-
     try:
         response_with_search = client.models.generate_content(
             model=MODEL_ID,
@@ -119,14 +118,12 @@ Return a text response only, not an executable code response.
         parsing_prompt = f"""Here is the valuation text: {valuation_text}
 Your task is to parse this text into a JSON object that adheres to the ValuationResponse schema.
 Provide detailed reasoning without linking that reasoning to the source information, such as 'based on the image'.
-The ValuationResponse schema is: {ValuationResponse.schema_json()}
+The ValuationResponse schema is: {ValuationResponse.model_json_schema()}
 Ensure the JSON is valid and contains the estimated_value, reasoning, and search_urls fields."""
-
         response_for_parsing = client.models.generate_content(
             model=MODEL_ID, contents=parsing_prompt, config=config_for_parsing
         )
         valuation_response = response_for_parsing.text
-        print(valuation_response)
 
         return ValuationResponse.model_validate_json(valuation_response)
 
@@ -147,15 +144,10 @@ async def estimate_item_value(
     if not image_url:
         raise HTTPException(status_code=400, detail="Image URL is required.")
 
-    transaction_id = datetime.datetime.utcnow().strftime(
-        "%Y%m%d%H%M%S%f"
-    )  # Simple transaction ID
+    transaction_id = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S%f")
 
     try:
-        # item_description = generate_item_description(image_url, description)
-        # response_data = estimate_value_with_search(item_description, description)
         response_data = estimate_value(image_url, description)
-        print(response_data)
         formatted_value = (
             f"{response_data.estimated_value:.2f}"  # Format to two decimal places
         )
@@ -195,32 +187,25 @@ async def estimate_item_value(
 
 @app.post("/upload-image")
 async def upload_image(image_file: UploadFile = File(...)):
-    """Uploads an image, returns an HTML img tag to display it, and sets the image URL in a hidden field."""
-    print(f"Incoming request: {image_file}")
-    print(f"Image file filename: {image_file.filename}")
-    print(f"Image file content type: {image_file.content_type}")
-
+    """Uploads an image, returns a Data URL for preview, and stores the GCS URI."""
     if not image_file.content_type.startswith("image/"):
         raise HTTPException(
             status_code=400, detail="Invalid image file type. Please upload an image."
         )
 
     try:
-        print("Before upload to GCS")
+        contents = await image_file.read()
+        await image_file.seek(0)
+
         image_uri = upload_image_to_gcs(image_file)
-        print("After upload to GCS")
-        # Include setting the hidden input's value in the response
-        return HTMLResponse(
-            content=f"""
-            <img src='{image_uri}' class='w-full'>
-            <script>
-                document.getElementById('image_url').value = '{image_uri}';
-            </script>
-        """
-        )
+        encoded_image = base64.b64encode(contents).decode("utf-8")
+        data_url = f"data:{image_file.content_type};base64,{encoded_image}"
+
+        return JSONResponse({"data_url": data_url, "gcs_uri": image_uri})
     except HTTPException as http_exc:
         print(http_exc)
         raise http_exc
+
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=f"Error uploading image: {e}")

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Item Valuation</title>
+    <title>AI Appraiser</title>
     <link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet" />
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -86,19 +86,13 @@
                 });
 
                 if (response.ok) {
-                    const html = await response.text();
-                    // document.getElementById('image-preview').innerHTML = html;
-
-                    // Extract the image URL from the response HTML
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const imageUrl = doc.querySelector('img').src;
+                    const data = await response.json();
 
                     // Replace placeholder with the actual image
-                    document.getElementById('image-preview').innerHTML = `<img src="${imageUrl}" alt="Uploaded Image" style="max-width: 100%; max-height: 256px; margin-left: auto; margin-right: auto;">`;
+                    document.getElementById('image-preview').innerHTML = `<img src="${data.data_url}" alt="Uploaded Image" style="max-width: 100%; max-height: 256px; margin-left: auto; margin-right: auto;">`;
 
-                    // Set the hidden input's value
-                    document.getElementById('image_url').value = imageUrl;
+                    // Set the hidden input's value to the GCS URI
+                    document.getElementById('image_url').value = data.gcs_uri;
                     document.getElementById('description').value = '';
                     document.getElementById('results').innerHTML = '';
 
