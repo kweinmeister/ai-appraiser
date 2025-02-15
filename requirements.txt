@@ -1,6 +1,6 @@
-fastapi
-uvicorn
-google-cloud-storage
-google-generativeai
-pydantic
-python-magic
+fastapi[standard]==0.115.8
+google-cloud-storage==3.0.0
+google-genai==1.2.0
+uvicorn==0.34.0
+pydantic==2.10.6
+python-multipart==0.0.20

@@ -10,9 +10,9 @@ from google.genai.types import (
 )
 from pydantic import BaseModel
 import os
+import sys
 import datetime
 from mimetypes import guess_type
-from fastapi.middleware.cors import CORSMiddleware
 import base64
 import logging
 
@@ -23,6 +23,10 @@ PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
 LOCATION = os.environ.get("GOOGLE_CLOUD_REGION", "us-central1")
 MODEL_ID = os.environ.get("MODEL_ID", "gemini-2.0-flash-001")
 CLOUD_STORAGE_BUCKET_NAME = os.environ.get("CLOUD_STORAGE_BUCKET_NAME")
+if not CLOUD_STORAGE_BUCKET_NAME:
+    logging.error("CLOUD_STORAGE_BUCKET_NAME environment variable not set.")
+    sys.exit(1)
+
 DATASTORE_KIND = "valuation_transactions"  # For Datastore logging
 
 storage_client = storage.Client(project=PROJECT_ID)
@@ -96,10 +100,12 @@ Return a text response only, not an executable code response.
             ],
             config=config_with_search,
         )
-        try:
-            valuation_text = response_with_search.text
-        except:
-            valuation_text = "Error estimating value: no text response."
+
+        # Use final part of search results with answer
+        valuation_text = "Error estimating value: no text response."
+        for part in response_with_search.candidates[0].content.parts:
+            if part.text:
+                valuation_text = part.text
 
     except Exception as e:
         logging.error(f"Unexpected error during content generation: {e}")
