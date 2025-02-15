@@ -8,18 +8,20 @@
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
-<body class="bg-gray-100 h-screen flex items-center justify-center">
-    <div class="bg-white p-8 rounded shadow-md w-full max-w-4xl">
+<body class="bg-gray-100">
+    <div class="bg-white p-8 rounded shadow-md w-full max-w-4xl mx-auto">
         <div class="bg-gradient-to-r from-green-400 to-green-700 text-white p-4 rounded-t-lg text-center">
-            <h1 class="text-4xl font-bold tracking-wide">Valuator</h1>
-            <p class="text-lg mt-2">Estimate the value of your items quickly and easily.</p>
+            <h1 class="text-4xl font-bold tracking-wide">AI Appraiser</h1>
+            <p class="text-lg mt-2">Estimate the value of your items with Generative AI</p>
         </div>
         <div class="grid grid-cols-2 gap-4 mt-4">
             <div>
                 <div class="p-4 bg-gray-100 rounded-lg">
                     <h2 class="text-lg font-semibold mb-2 text-center">Item Input</h2>
-                    <div id="image-preview" class="mt-4 flex justify-center">
-                        <!-- Image preview and URL will be displayed here -->
+                    <div id="image-preview" class="mt-4 flex justify-center mb-4">
+                        <div class="border-dashed border-2 border-gray-300 w-64 h-64 flex items-center justify-center">
+                            <span class="text-gray-500">Image Preview</span>
+                        </div>
                     </div>
                     <div class="mb-4">
                         <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white sr-only" for="image_file">Upload file</label>
@@ -32,9 +34,9 @@
                         <input type="hidden" id="image_url" name="image_url" value="">
                         <div class="mb-4">
                             <label for="description" class="block text-gray-700 text-sm font-bold mb-2">Description (optional):</label>
-                            <input type="text" id="description" name="description" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                            <textarea id="description" name="description" rows="3" class="bg-white shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"></textarea>
                         </div>
-                        <button type="submit" hx-disable-element="this" hx-vals='{"image_url": "#image_url"}' onclick="if (document.getElementById('image_url').value === '') { alert('Please upload an image first.'); return false; }" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        <button type="submit" hx-disable-element="this" hx-vals='{"image_url": "#image_url"}' onclick="if (document.getElementById('image_url').value === '') { alert('Please upload an image first.'); return false; }" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
                             Estimate Value
                         </button>
                     </form>
@@ -85,12 +87,15 @@
 
                 if (response.ok) {
                     const html = await response.text();
-                    document.getElementById('image-preview').innerHTML = html;
+                    // document.getElementById('image-preview').innerHTML = html;
 
                     // Extract the image URL from the response HTML
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, 'text/html');
                     const imageUrl = doc.querySelector('img').src;
+
+                    // Replace placeholder with the actual image
+                    document.getElementById('image-preview').innerHTML = `<img src="${imageUrl}" alt="Uploaded Image" style="max-width: 100%; max-height: 256px; margin-left: auto; margin-right: auto;">`;
 
                     // Set the hidden input's value
                     document.getElementById('image_url').value = imageUrl;
