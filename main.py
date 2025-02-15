@@ -14,11 +14,14 @@ import datetime
 from mimetypes import guess_type
 from fastapi.middleware.cors import CORSMiddleware
 import base64
+import logging
 
 # --- Configuration ---
+logging.basicConfig(level=logging.INFO)
+
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
 LOCATION = os.environ.get("GOOGLE_CLOUD_REGION", "us-central1")
-MODEL_ID = "gemini-2.0-flash-001"
+MODEL_ID = os.environ.get("MODEL_ID", "gemini-2.0-flash-001")
 CLOUD_STORAGE_BUCKET_NAME = os.environ.get("CLOUD_STORAGE_BUCKET_NAME")
 DATASTORE_KIND = "valuation_transactions"  # For Datastore logging
 
@@ -44,18 +47,6 @@ app = FastAPI(
     description="API to estimate item value based on image and text.",
 )
 
-# --- CORS Configuration ---
-origins = ["*"]  # Allow all origins for local development
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
 # --- Helper Functions ---
 def upload_image_to_gcs(file: UploadFile) -> str:
     """Uploads an image file to Google Cloud Storage and returns the GCS URI."""
@@ -68,7 +59,7 @@ def upload_image_to_gcs(file: UploadFile) -> str:
         blob.upload_from_file(file.file, content_type=file.content_type)
         return f"gs://{CLOUD_STORAGE_BUCKET_NAME}/{filename}"
     except Exception as e:
-        print(e)
+        logging.error(f"Error uploading image to Cloud Storage: {e}")
         raise HTTPException(
             status_code=500, detail=f"Error uploading image to Cloud Storage: {e}"
         )
@@ -109,8 +100,14 @@ Return a text response only, not an executable code response.
             valuation_text = response_with_search.text
         except:
             valuation_text = "Error estimating value: no text response."
-        print(valuation_text)
 
+    except Exception as e:
+        logging.error(f"Unexpected error during content generation: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected error: {e}"
+        )
+
+    try:
         # Second Gemini call to parse the valuation string into a ValuationResponse
         config_for_parsing = GenerateContentConfig(
             response_mime_type="application/json", response_schema=ValuationResponse
@@ -124,15 +121,12 @@ Ensure the JSON is valid and contains the estimated_value, reasoning, and search
             model=MODEL_ID, contents=parsing_prompt, config=config_for_parsing
         )
         valuation_response = response_for_parsing.text
-
-        return ValuationResponse.model_validate_json(valuation_response)
-
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error estimating value with search: {e}"
-        )
+        logging.error(f"Error parsing valuation response: {e}")
+        raise HTTPException(status_code=500, detail=f"Error parsing valuation: {e}")
 
 
+    return ValuationResponse.model_validate_json(valuation_response)
 # --- API Endpoints ---
 @app.post("/value", response_model=ValuationResponse)
 async def estimate_item_value(
@@ -148,16 +142,13 @@ async def estimate_item_value(
 
     try:
         response_data = estimate_value(image_url, description)
-        response_data.estimated_value = float(
-            f"{response_data.estimated_value:.2f}"
-        )  # Format and convert back to float
         return JSONResponse(content=response_data.model_dump())
 
     except HTTPException as http_exc:
-        print(http_exc)
+        logging.error(f"HTTP Exception in /value: {http_exc}")
         raise http_exc
     except Exception as e:
-        print(e)
+        logging.error(f"Internal server error in /value: {e}")
         raise HTTPException(
             status_code=500, detail="Internal server error during valuation."
         )
@@ -181,10 +172,11 @@ async def upload_image(image_file: UploadFile = File(...)):
 
         return JSONResponse({"data_url": data_url, "gcs_uri": image_uri})
     except HTTPException as http_exc:
-        print(http_exc)
+        logging.error(f"HTTP Exception in /upload-image: {http_exc}")
         raise http_exc
 
     except Exception as e:
+        logging.error(f"Error uploading image: {e}")
         raise HTTPException(status_code=500, detail=f"Error uploading image: {e}")
 
 
