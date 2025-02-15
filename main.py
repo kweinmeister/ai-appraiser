@@ -207,7 +207,6 @@ async def upload_image(image_file: UploadFile = File(...)):
         raise http_exc
 
     except Exception as e:
-        print(e)
         raise HTTPException(status_code=500, detail=f"Error uploading image: {e}")
 
 
