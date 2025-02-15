@@ -148,32 +148,10 @@ async def estimate_item_value(
 
     try:
         response_data = estimate_value(image_url, description)
-        formatted_value = (
-            f"{response_data.estimated_value:.2f}"  # Format to two decimal places
-        )
-        html_content = f"""
-        <div class="bg-white p-4 rounded shadow-md">
-            <p><strong>Estimated Value:</strong> ${formatted_value}</p>
-            <br>
-            <p class="text-sm">{response_data.reasoning}</p>"""
-
-        if (
-            response_data.search_urls
-            and response_data.search_urls != ["N/A"]
-            and any(response_data.search_urls)
-        ):
-            html_content += f"""
-            <br>
-            <p><strong>Sources:</strong></p>
-            <ul class="text-sm list-disc list-inside ml-4">
-                {"".join(f"<li><a href='{url}' target='_blank'>{url}</a></li>" for url in response_data.search_urls)}
-            </ul>
-            """
-
-        html_content += """
-        </div>
-        """
-        return HTMLResponse(content=html_content, media_type="text/html")
+        response_data.estimated_value = float(
+            f"{response_data.estimated_value:.2f}"
+        )  # Format and convert back to float
+        return JSONResponse(content=response_data.model_dump())
 
     except HTTPException as http_exc:
         print(http_exc)

@@ -44,7 +44,7 @@
                 <div class="p-4 bg-gray-100 rounded-lg">
                     <h2 class="text-lg font-semibold mb-2 text-center">Valuation Results</h2>
                     <div id="results-container" class="mt-4" style="position: relative;">
-                        <div id="results">
+                        <div id="results" hx-swap="outerHTML">
                             <!-- Valuation results will be displayed here -->
                         </div>
                         <div id="spinner" class="hidden absolute inset-0 flex items-center justify-center pt-32">
@@ -60,25 +60,46 @@
             document.getElementById('spinner').classList.remove('hidden');
         });
 
-        document.getElementById('valuation-form').addEventListener('htmx:afterRequest', function() {
+        document.getElementById('valuation-form').addEventListener('htmx:afterRequest', function(evt) {
             document.getElementById('spinner').classList.add('hidden');
+            if (evt.detail.successful) {
+                const data = JSON.parse(evt.detail.xhr.response);
+                let resultsHTML = `
+                    <div class="bg-white p-4 rounded shadow-md">
+                        <p><strong>Estimated Value:</strong> $${data.estimated_value}</p>
+                        <br>
+                        <p class="text-sm">${data.reasoning}</p>`;
+
+                if (data.search_urls && data.search_urls.length > 0 && data.search_urls[0] !== "N/A") {
+                    resultsHTML += `
+                        <br>
+                        <p><strong>Sources:</strong></p>
+                        <ul class="text-sm list-disc list-inside ml-4">`;
+                    data.search_urls.forEach(url => {
+                        resultsHTML += `<li><a href="${url}" target="_blank">${url}</a></li>`;
+                    });
+                    resultsHTML += `</ul>`;
+                }
+                resultsHTML += `</div>`;
+                document.getElementById('results').innerHTML = resultsHTML;
+            }
         });
 
-    document.getElementById('image_file').addEventListener('htmx:afterRequest', function(evt) {
-        if (evt.detail.successful) {
-            const data = JSON.parse(evt.detail.xhr.response);
-            const preview = document.getElementById('image-preview');
-            if (data && data.data_url) {
-                // Construct the entire inner HTML, including the inner div and the image
-                preview.innerHTML = `
-                    <div id="image-preview-inner" class="border-dashed border-2 border-gray-300 w-64 h-64 flex items-center justify-center">
-                        <img src="${data.data_url}" alt="Uploaded Image" style="max-width: 100%; max-height: 256px; margin-left: auto; margin-right: auto;">
-                    </div>
-                `;
-                document.getElementById('image_url').value = data.gcs_uri;
+        document.getElementById('image_file').addEventListener('htmx:afterRequest', function(evt) {
+            if (evt.detail.successful) {
+                const data = JSON.parse(evt.detail.xhr.response);
+                const preview = document.getElementById('image-preview');
+                if (data && data.data_url) {
+                    // Construct the entire inner HTML, including the inner div and the image
+                    preview.innerHTML = `
+                        <div id="image-preview-inner" class="border-dashed border-2 border-gray-300 w-64 h-64 flex items-center justify-center">
+                            <img src="${data.data_url}" alt="Uploaded Image" style="max-width: 100%; max-height: 256px; margin-left: auto; margin-right: auto;">
+                        </div>
+                    `;
+                    document.getElementById('image_url').value = data.gcs_uri;
+                }
             }
-        }
-    });
+        });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
 </body>
