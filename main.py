@@ -4,6 +4,7 @@ import logging
 import os
 from mimetypes import guess_type
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from google import genai
@@ -14,16 +15,16 @@ from pydantic import BaseModel
 # --- Configuration ---
 logging.basicConfig(level=logging.INFO)
 
-PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
-LOCATION = os.environ.get("GOOGLE_CLOUD_REGION", "us-central1")
-MODEL_ID = os.environ.get("MODEL_ID", "gemini-2.0-flash-001")
-CLOUD_STORAGE_BUCKET_NAME = os.environ.get("CLOUD_STORAGE_BUCKET_NAME")
-if not CLOUD_STORAGE_BUCKET_NAME:
-    logging.warning(
-        "CLOUD_STORAGE_BUCKET_NAME environment variable not set. Image uploads to GCS will be skipped."
-    )
+load_dotenv()
 
-DATASTORE_KIND = "valuation_transactions"  # For Datastore logging
+PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
+LOCATION = os.environ.get("LOCATION", "us-central1")
+MODEL_ID = os.environ.get("MODEL_ID", "gemini-2.0-flash-001")
+STORAGE_BUCKET = os.environ.get("STORAGE_BUCKET")
+if not STORAGE_BUCKET:
+    logging.warning(
+        "STORAGE_BUCKET environment variable not set. Image uploads to GCS will be skipped."
+    )
 
 storage_client = storage.Client(project=PROJECT_ID)
 client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
@@ -51,17 +52,18 @@ app = FastAPI(
 # --- Helper Functions ---
 def upload_image_to_gcs(file: UploadFile) -> str:
     """Uploads an image file to Google Cloud Storage and returns the GCS URI."""
-    bucket = storage_client.bucket(CLOUD_STORAGE_BUCKET_NAME)
+    bucket = storage_client.bucket(STORAGE_BUCKET)
     timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d%H%M%S%f")
     filename = f"{timestamp}_{file.filename}"
     blob = bucket.blob(filename)
 
     try:
         blob.upload_from_file(file.file, content_type=file.content_type)
-        return f"gs://{CLOUD_STORAGE_BUCKET_NAME}/{filename}"
+        return f"gs://{STORAGE_BUCKET}/{filename}"
     except Exception as e:
         logging.error(f"Error uploading image to Cloud Storage: {e}")
         raise
+
 
 def get_data_url(file: UploadFile, contents: bytes) -> str:
     """Creates a data URL for the image."""
@@ -153,9 +155,7 @@ async def upload_image(image_file: UploadFile = File(...)):
     try:
         contents = await image_file.read()
         await image_file.seek(0)  # Reset for GCS upload
-        image_uri = (
-            upload_image_to_gcs(image_file) if CLOUD_STORAGE_BUCKET_NAME else None
-        )
+        image_uri = upload_image_to_gcs(image_file) if STORAGE_BUCKET else None
         data_url = get_data_url(image_file, contents)
 
         return JSONResponse(
@@ -184,10 +184,6 @@ async def estimate_item_value(
             status_code=400, detail="Either image_url or image_data is required."
         )
 
-    transaction_id = datetime.datetime.now(datetime.timezone.utc).strftime(
-        "%Y%m%d%H%M%S%f"
-    )
-
     try:
         response_data = estimate_value(
             image_url,
@@ -198,9 +194,6 @@ async def estimate_item_value(
             mime_type=content_type,
         )
         return JSONResponse(content=response_data.model_dump())
-    except ValueError as e:
-        logging.error(f"ValueError in /value: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logging.error(f"Internal server error in /value: {e}")
         raise HTTPException(

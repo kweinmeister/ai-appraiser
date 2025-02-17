@@ -125,6 +125,7 @@ def test_upload_image_to_gcs(mock_bucket):
 client = TestClient(app)
 
 
+@patch("main.STORAGE_BUCKET", "test-bucket")
 @patch("main.upload_image_to_gcs")
 def test_upload_image_success(mock_upload_image_to_gcs):
     mock_upload_image_to_gcs.return_value = "gs://test-bucket/test.jpg"
