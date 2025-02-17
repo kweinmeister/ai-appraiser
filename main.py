@@ -52,7 +52,7 @@ app = FastAPI(
 def upload_image_to_gcs(file: UploadFile) -> str:
     """Uploads an image file to Google Cloud Storage and returns the GCS URI."""
     bucket = storage_client.bucket(CLOUD_STORAGE_BUCKET_NAME)
-    timestamp = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+    timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d%H%M%S%f")
     filename = f"{timestamp}_{file.filename}"
     blob = bucket.blob(filename)
 
