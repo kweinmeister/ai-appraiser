@@ -1,5 +1,7 @@
 # AI Appraiser
 
+![AI Appraiser GIF](ai-appraiser.gif)
+
 This application estimates the value of an item from an image. It leverages Google's [Gemini](https://ai.google.dev/gemini-api/docs) model with integrated [Grounding with Google Search](https://ai.google.dev/gemini-api/docs/grounding) capabilities to improve the accuracy of valuations.
 
 This application is intended for informational purposes only and should not substitute for professional appraisals.
@@ -18,25 +20,21 @@ This application is intended for informational purposes only and should not subs
 
 - **AI-powered valuation:** Get instant value estimates for your items using images and descriptions.
 - **Grounded search:** Leverages Google's Gemini model with integrated search for recent pricing.
-- **Easy Image Upload:** Supports GIF, PNG, and JPG images with a user-friendly interface.
+- **Image upload:** Supports GIF, PNG, and JPG images with a user-friendly interface.
 - **Optional Cloud Storage:** Store images securely in Google Cloud Storage.
 
 ## Architecture
 
 The AI Appraiser application follows a client-server architecture:
 
-- **Frontend (index.html):** The client-side interface built with HTML, Tailwind CSS, and HTMX. It handles user interactions, image uploads, and displays valuation results.
-- **Backend (main.py):** A FastAPI server that handles API requests. It interacts with Google Cloud Storage (optional) and the Gemini API for image processing and valuation.
+- **Frontend ([index.html](./index.html)):** The client-side interface built with HTML, Tailwind CSS, and HTMX. It handles user interactions, image uploads, and displays valuation results.
+- **Backend ([main.py](./main.py)):** A FastAPI server that handles API requests. It interacts with Google Cloud Storage (optional) and the Gemini API for image processing and valuation.
 - **Gemini API:** A powerful language model from Google that performs the core valuation logic, utilizing its built-in search tool for market data.
 
 ## Prerequisites
 
-- Python 3.9+
-- pip
-- A Google Cloud project with billing enabled.
-- The following APIs enabled in your Google Cloud project:
-  - Vertex AI API
-  - Cloud Storage API
+- Python 3.9+ with `pip`
+- A Google Cloud project with billing enabled. and `Vertex AI` and `Cloud Storage` APIs enabled
 - Set up Application Default Credentials (ADC) for your Google Cloud project. You can do this by running `gcloud auth application-default login` in your terminal.
 - (Optional) If storing images in Google Cloud Storage, configure a Google Cloud service account with the necessary permissions (`storage.objects.create` and `storage.objects.get`). You can find instructions on creating and managing service accounts in the [Google Cloud documentation](https://cloud.google.com/iam/docs/service-accounts).
 
