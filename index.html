@@ -19,8 +19,8 @@
     </script>
   </head>
   <body class="bg-blue-50">
-    <div class="container mx-auto p-8">
-      <div class="bg-white p-8 rounded-lg shadow-md">
+    <div class="container mx-auto p-8 h-full">
+      <div class="bg-white p-8 rounded-lg shadow-md h-full">
         <div class="flex items-center justify-between mb-8">
           <h1 class="text-5xl font-bold text-gray-800">AI Appraiser</h1>
           <p
@@ -33,7 +33,7 @@
           class="bg-gradient-to-r from-blue-500 to-blue-600 h-1 w-full mb-8 rounded-full"
         ></div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
           <div>
             <div class="bg-gray-50 p-6 rounded-lg">
               <h2 class="text-xl font-semibold text-gray-700 mb-4">
@@ -41,31 +41,83 @@
               </h2>
               <div
                 id="image-preview"
-                class="mt-4 flex justify-center mb-6"
+                class="mt-4 flex justify-center mb-0"
                 hx-swap="innerHTML"
               >
                 <div
-                  id="image-preview-inner"
-                  class="border-dashed border-2 border-gray-400 w-64 h-64 flex items-center justify-center rounded-lg hover:bg-gray-100 transition duration-300"
+                id="image-preview-inner"
+                class="border-dashed border-2 border-blue-400 rounded-lg w-96 h-96 flex items-center justify-center p-0 hover:bg-gray-100 transition duration-300 hidden"
                 >
-                  <span class="text-gray-500">Image Preview</span>
-                </div>
+                <span class="text-gray-500 text-sm">Image Preview</span>
               </div>
-              <div class="mb-6">
-                <label
-                  class="block mb-2 text-sm font-medium text-gray-900 sr-only"
-                  for="image_file"
-                  >Upload file</label
-                >
-                <input
-                  class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  id="image_file"
-                  name="image_file"
-                  type="file"
-                  hx-post="/upload-image"
-                  hx-target="#image-preview"
-                  hx-encoding="multipart/form-data"
-                />
+              </div>
+              <div class="dropzone-container">
+                <div class="mb-6">
+                  <label
+                    class="block mb-2 text-sm font-medium text-gray-900 sr-only"
+                    for="image_file"
+                  >
+                    Upload file
+                  </label>
+                  <div
+                    class="flex items-center justify-center w-full"
+                  >
+                    <label
+                    for="image_file"
+                    class="flex flex-col items-center justify-center w-64 h-64 border-2 border-blue-400 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 p-0"
+                  >
+                  <!-- border-gray-300-->
+                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+
+                      <!-- <svg
+                        class="w-8 h-8 mb-4 text-gray-500"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 20 16"
+                      >
+                        <path
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
+                        />
+                      </svg> -->
+                      <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke-width="1.5"
+                      stroke="currentColor"
+                      class="h-10 w-10 text-blue-500"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"
+                      />
+                    </svg>
+                      <p class="mb-2 text-sm text-gray-500">
+                        <span class="font-semibold">Click to upload</span> or drag
+                        and drop
+                      </p>
+                      <p class="text-xs text-gray-500">
+                        GIF, PNG, or JPG images supported
+                      </p>
+                    </div>
+                    <input
+                      id="image_file"
+                      name="image_file"
+                      type="file"
+                      class="hidden"
+                      hx-post="/upload-image"
+                      hx-target="#image-preview"
+                      hx-encoding="multipart/form-data"
+                    />
+                  </label>
+                  </div>
+                </div>
               </div>
 
               <form
@@ -98,7 +150,7 @@
                   hx-trigger="load"
                   hx-swap="none"
                 />
-                <div class="mb-6">
+                <div class="mb-6 mt-4">
                   <label
                     for="description"
                     class="block text-gray-700 text-sm font-bold mb-2"
@@ -119,20 +171,27 @@
                 >
                   Estimate Value
                 </button>
+                <button
+                  type="button"
+                  id="reset-button"
+                  class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/50 ml-2"
+                >
+                  Reset
+                </button>
               </form>
             </div>
           </div>
-          <div>
-            <div class="bg-gray-50 p-6 rounded-lg">
+          <div class="h-full">
+            <div class="bg-gray-50 p-6 rounded-lg h-full">
               <h2 class="text-xl font-semibold text-gray-700 mb-4">
                 Valuation Results
               </h2>
               <div
                 id="results-container"
-                class="mt-4 rounded-lg"
+                class="mt-4 rounded-lg h-full"
                 style="position: relative"
               >
-                <div id="results" hx-swap="outerHTML">
+                <div id="results" hx-swap="outerHTML" class="h-full">
                   <!-- Valuation results will be displayed here -->
                 </div>
                 <div
@@ -212,8 +271,8 @@
             if (data && data.data_url) {
               // Construct the entire inner HTML, including the inner div and the image
               preview.innerHTML = `
-                        <div id="image-preview-inner" class="border-dashed border-2 border-gray-400 w-64 h-64 flex items-center justify-center rounded-lg hover:bg-gray-100 transition duration-300">
-                            <img src="${data.data_url}" alt="Uploaded Image" class="max-w-full max-h-64 mx-auto rounded-lg">
+                        <div id="image-preview-inner" class="border-solid border-2 border-gray-400 rounded-lg w-64 h-64 flex items-center justify-center p-0 hover:bg-gray-100 transition duration-300 bg-white">
+                            <img src="${data.data_url}" alt="Uploaded Image" class="max-w-full h-full mx-auto object-contain">
                         </div>
                     `;
               document.getElementById("image_url").value = data.gcs_uri;
@@ -221,6 +280,11 @@
               contentType = data.content_type;
               document.getElementById("image_data").value = imageData;
               document.getElementById("content_type").value = contentType;
+
+              // Hide the dropzone and show the preview
+              document.querySelector(".dropzone-container").classList.add("hidden");
+              document.getElementById("image-preview-inner").classList.remove("hidden");
+              document.getElementById("image-preview-inner").classList.add("bg-white");
             }
           }
         });
@@ -236,6 +300,36 @@
             event.preventDefault();
           }
         });
+      }
+
+      const resetButton = document.getElementById("reset-button");
+        if (resetButton) {
+          resetButton.addEventListener("click", function () {
+            // Clear the description field
+            document.getElementById("description").value = "";
+
+            // Reset the image preview
+            document.getElementById("image-preview").innerHTML = `
+              <div id="image-preview-inner" class="border-dashed border-2 border-blue-400 rounded-lg w-96 h-96 flex items-center justify-center p-0 hover:bg-gray-100 transition duration-300 hidden">
+                <span class="text-gray-500">Image Preview</span>
+              </div>
+            `;
+
+
+            // Clear hidden input fields
+            document.getElementById("image_url").value = "";
+            document.getElementById("image_data").value = "";
+            document.getElementById("content_type").value = "";
+            
+            // Show the dropzone and hide the preview
+            document.querySelector(".dropzone-container").classList.remove("hidden");
+            document.getElementById("image-preview-inner").classList.add("hidden");
+            document.getElementById("image-preview-inner").classList.remove("bg-white");
+
+            // Reset imageData and contentType
+            imageData = null;
+            contentType = null;
+          });
       }
     </script>
   </body>
