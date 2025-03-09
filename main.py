@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from google import genai
 from google.cloud import storage
 from google.genai.types import GenerateContentConfig, GoogleSearch, Part, Tool
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # --- Configuration ---
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +21,7 @@ PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
 LOCATION = os.environ.get("LOCATION", "us-central1")
 MODEL_ID = os.environ.get("MODEL_ID", "gemini-2.0-flash-001")
 STORAGE_BUCKET = os.environ.get("STORAGE_BUCKET")
+DEFAULT_CURRENCY = os.environ.get("CURRENCY", "usd")
 if not STORAGE_BUCKET:
     logging.warning(
         "STORAGE_BUCKET environment variable not set. Image uploads to GCS will be skipped."
@@ -37,7 +38,7 @@ class ValuationRequest(BaseModel):
 
 class ValuationResponse(BaseModel):
     estimated_value: float
-    currency: str
+    currency: str = Field(DEFAULT_CURRENCY, description="Currency code (ISO 4217)")
     reasoning: str
     search_urls: list[str]
 
@@ -76,8 +77,12 @@ def estimate_value(
     description: str,
     image_data: bytes | None = None,
     mime_type: str | None = None,
+    currency: str = DEFAULT_CURRENCY,
 ) -> ValuationResponse:
-    """Calls Gemini API with Search Tool to estimate item value, then parses the result into a ValuationResponse."""
+    """
+    Calls Gemini API with Search Tool to estimate item value, then parses the result into a ValuationResponse.
+    """
+
     valuation_prompt = f"""You are a professional appraiser, adept at determining the value of items based on their description and market data.
 Here is additional information provided by the user: {description}.
 Your task is to estimate the item's fair market value.
@@ -85,7 +90,7 @@ Your task is to estimate the item's fair market value.
 To do this, you must use your built-in Search Tool to find comparable items currently for sale and recent auction results.
 Analyze the item description, user information, and the search results carefully.
 
-Provide a reasoned estimate of the item's value (or a price range) in USD.
+Provide a reasoned estimate of the item's value (or a price range) in {currency}.
 Justify your estimate based on the condition of the item, its characteristics, and the market prices of similar items.
 Consider details such as:
 - Condition (e.g., new, used, excellent, poor)
@@ -134,7 +139,7 @@ Return a text response only, not an executable code response.
 Your task is to parse this text into a JSON object that adheres to the ValuationResponse schema.
 Provide detailed reasoning without linking that reasoning to the source information, such as 'based on the image'.
 The ValuationResponse schema is: {ValuationResponse.model_json_schema()}
-Ensure the JSON is valid and contains the estimated_value, reasoning, and search_urls fields."""
+Ensure the JSON is valid and contains the estimated_value, currency (using ISO 4217 currency code): {currency}, reasoning, and search_urls fields."""
     response_for_parsing = client.models.generate_content(
         model=MODEL_ID, contents=parsing_prompt, config=config_for_parsing
     )
@@ -176,6 +181,7 @@ async def estimate_item_value(
     image_url: str = Form(None),
     image_data: str = Form(None),
     content_type: str = Form(None),
+    currency: str = Form(DEFAULT_CURRENCY),
 ):
     """Estimates the value of an item based on an image and text input."""
 
@@ -192,19 +198,23 @@ async def estimate_item_value(
                 base64.b64decode(image_data.split(",", 1)[1]) if image_data else None
             ),
             mime_type=content_type,
+            currency=currency,
         )
         return JSONResponse(content=response_data.model_dump())
     except Exception as e:
         logging.error(f"Internal server error in /value: {e}")
-        raise HTTPException(
-            status_code=500, detail="Internal server error during valuation."
-        )
+        raise HTTPException(status_code=500, detail=f"Error: {e}")
 
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     with open("index.html", "r") as f:
         html_content = f.read()
+    html_content = html_content.replace(
+        "let defaultCurrency = 'USD';",
+        f"let defaultCurrency = '{DEFAULT_CURRENCY}';",
+    )
+
     return HTMLResponse(content=html_content, status_code=200)
 
 

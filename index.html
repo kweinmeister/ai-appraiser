@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@2"></script>
     <script>
+      let defaultCurrency = 'USD';
       tailwind.config = {
         theme: {
           extend: {
@@ -146,6 +147,26 @@
                     class="bg-white shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   ></textarea>
                 </div>
+
+                <div class="mb-6">
+                  <label
+                    for="currency"
+                    class="block text-gray-700 text-sm font-bold mb-2"
+                    >Currency:</label
+                  >
+                  <select
+                    id="currency"
+                    name="currency"
+                    class="bg-white shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  >
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - British Pound</option>
+                    <option value="JPY">JPY - Japanese Yen</option>
+                    <option value="CAD">CAD - Canadian Dollar</option>
+                  </select>
+                </div>
+
                 <button
                   type="submit"
                   id="estimate-value-button"
@@ -205,16 +226,19 @@
             const data = JSON.parse(evt.detail.xhr.response);
 
             // Format the currency
-            function formatCurrency(value) {
+            function formatCurrency(value, currency) {
               return new Intl.NumberFormat("en-US", {
                 style: "currency",
-                currency: "USD",
+                currency: currency,
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               }).format(value);
             }
 
-            const formattedValue = formatCurrency(data.estimated_value);
+            const formattedValue = formatCurrency(
+              data.estimated_value,
+              data.currency
+            );
 
             let resultsHTML = `
                     <div class="bg-white p-4 rounded-lg shadow-md">
@@ -316,6 +340,9 @@
 
           // Clear valuation results
           document.getElementById("results").innerHTML = "";
+
+          // Reset the currency selection
+          document.getElementById("currency").value = defaultCurrency;
         });
       }
     </script>
