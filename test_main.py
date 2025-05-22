@@ -12,6 +12,17 @@ from main import (
     upload_image_to_gcs,
 )
 
+# --- Global Mocks for CI ---
+# Mock storage.Client to prevent DefaultCredentialsError in CI
+patch('main.storage.Client', autospec=True).start()
+
+# Mock genai.Client to prevent DefaultCredentialsError in CI
+patch('main.genai.Client', autospec=True).start()
+
+# It's important to call .start() on these patchers and keep the return value if you need to stop them later,
+# but for module-level mocks intended to last for the entire test session, just starting them is sufficient.
+# Individual tests can still use @patch for more specific mocking of these clients or their methods.
+
 
 # --- Test Helper Functions ---
 from main import DEFAULT_CURRENCY
@@ -273,11 +284,22 @@ def test_estimate_value_invalid_estimated_value(mock_generate_content):
         )
 
 
-@patch("main.storage_client.bucket")
-def test_upload_image_to_gcs(mock_bucket):
-    # Mock Google Cloud Storage calls
+from main import STORAGE_BUCKET # Import for use in assertion
+
+
+@patch("main.storage_client.bucket") # This will patch the 'bucket' attribute of the globally mocked main.storage_client
+def test_upload_image_to_gcs(mock_bucket_method): # Renamed to reflect it's a method of the client
+    # Mock Google Cloud Storage calls further if needed, or use the mock_bucket_method directly
+    # For instance, mock_bucket_method itself is a MagicMock.
+    # We need to set up its return value if the code calls it like storage_client.bucket(BUCKET_NAME)
+    # and then methods on the returned bucket object.
+    mock_actual_bucket_instance = MagicMock()
+    # Set the name attribute on the mock_actual_bucket_instance for the gcs_uri assertion
+    mock_actual_bucket_instance.name = STORAGE_BUCKET if STORAGE_BUCKET else "default-test-bucket"
+    mock_bucket_method.return_value = mock_actual_bucket_instance # This is what storage_client.bucket(name) returns
+
     mock_blob = MagicMock()
-    mock_bucket.return_value.blob.return_value = mock_blob
+    mock_actual_bucket_instance.blob.return_value = mock_blob # This is what bucket_instance.blob(name) returns
 
     # Create a custom mock for UploadFile
     file_content = b"fake image content"
@@ -293,14 +315,15 @@ def test_upload_image_to_gcs(mock_bucket):
 
     import re
     # Assertions
-    assert gcs_uri.startswith(f"gs://{mock_bucket.name}/")
+    # The gcs_uri will be constructed using mock_actual_bucket_instance.name
+    assert gcs_uri.startswith(f"gs://{mock_actual_bucket_instance.name}/")
     # Ensure the filename is in the format <timestamp>_test.jpg
     file_part = gcs_uri.split("/")[-1]
     assert re.match(r"\d{20}_test\.jpg", file_part)
-    mock_bucket_factory.assert_called_once_with(STORAGE_BUCKET) # Assert factory was called with bucket name
-    mock_bucket.blob.assert_called_once() # Assert blob method was called on the bucket instance
+    mock_bucket_method.assert_called_once_with(STORAGE_BUCKET) # Assert the bucket method was called
+    mock_actual_bucket_instance.blob.assert_called_once() # Assert blob method was called on the bucket instance
     # The blob name should be file_part
-    assert mock_bucket.blob.call_args[0][0] == file_part
+    assert mock_actual_bucket_instance.blob.call_args[0][0] == file_part
     mock_blob.upload_from_file.assert_called_once_with(
         mock_file.file, content_type="image/jpeg"
     )
