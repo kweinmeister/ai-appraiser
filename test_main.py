@@ -12,17 +12,6 @@ from main import (
     upload_image_to_gcs,
 )
 
-# --- Global Mocks for CI ---
-# Mock storage.Client to prevent DefaultCredentialsError in CI
-patch('main.storage.Client', autospec=True).start()
-
-# Mock genai.Client to prevent DefaultCredentialsError in CI
-patch('main.genai.Client', autospec=True).start()
-
-# It's important to call .start() on these patchers and keep the return value if you need to stop them later,
-# but for module-level mocks intended to last for the entire test session, just starting them is sufficient.
-# Individual tests can still use @patch for more specific mocking of these clients or their methods.
-
 
 # --- Test Helper Functions ---
 from main import DEFAULT_CURRENCY
