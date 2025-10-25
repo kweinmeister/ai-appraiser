@@ -1,26 +1,23 @@
 import base64
 import io
-from unittest.mock import MagicMock, patch
-from freezegun import freeze_time
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
+from freezegun import freeze_time
+from google.api_core.exceptions import GoogleAPIError
+from pydantic import ValidationError
 
 from main import (
+    DEFAULT_CURRENCY,
     Currency,
     ValuationResponse,
-    app,
     estimate_value,
     get_data_url,
     upload_image_to_gcs,
 )
 
 
-# --- Test Helper Functions ---
-from main import DEFAULT_CURRENCY
-
-
-def test_get_data_url_correct_format():
+def test_get_data_url_correct_format() -> None:
     # Create a custom mock for UploadFile
     file_content = b"fake image content"
     mock_file = MagicMock()
@@ -32,51 +29,52 @@ def test_get_data_url_correct_format():
     assert data_url == "data:image/jpeg;base64,ZmFrZSBpbWFnZSBjb250ZW50"
 
 
-@patch("main.client.models.generate_content")
-def test_estimate_value_image_uri_success_eur(mock_generate_content):
-    # Simulate the final JSON output from the second (parsing) call
-    mock_final_response = MagicMock()
-    mock_final_response.text = '{"estimated_value": 100.0, "currency": "EUR", "reasoning": "Looks good", "search_urls": ["example.com"]}'
-
-    # The first call can be a simple mock, we don't need to inspect its output anymore
-    mock_valuation_response = MagicMock()
-    mock_valuation_response.candidates = [MagicMock()]
-    mock_valuation_response.candidates[0].content.parts = [MagicMock(text="Some text")]
-
-    mock_generate_content.side_effect = [
-        mock_valuation_response,
-        mock_final_response,
+def test_estimate_value_image_uri_success_eur(
+    mock_google_cloud_clients_and_app,
+) -> None:
+    _, _, mock_genai_client = mock_google_cloud_clients_and_app
+    mock_models = mock_genai_client.models
+    mock_models.generate_content.side_effect = [
+        MagicMock(
+            candidates=[
+                MagicMock(
+                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
+                ),
+            ],
+        ),
+        MagicMock(
+            text='{"estimated_value": 100.0, "currency": "EUR", "reasoning": "Looks good", "search_urls": ["example.com"]}',
+        ),
     ]
 
     response = estimate_value(
         image_uri="gs://some_bucket/some_image.jpg",
         description="A test item",
         currency=Currency.EUR,
+        client=mock_genai_client,
     )
 
     assert response.estimated_value == 100.0
     assert response.currency == Currency.EUR
     assert response.reasoning == "Looks good"
     assert response.search_urls == ["example.com"]
-
-    # We still expect two calls, but we don't need to inspect the prompts as deeply
-    assert mock_generate_content.call_count == 2
+    assert mock_models.generate_content.call_count == 2
 
 
-@patch("main.client.models.generate_content")
-def test_estimate_value_image_data_success(mock_generate_content):
-    # Simulate the final JSON output from the second (parsing) call
-    mock_final_response = MagicMock()
-    mock_final_response.text = f'{{"estimated_value": 100.0, "currency": "{DEFAULT_CURRENCY}", "reasoning": "Looks good", "search_urls": ["example.com"]}}'
-
-    # The first call can be a simple mock
-    mock_valuation_response = MagicMock()
-    mock_valuation_response.candidates = [MagicMock()]
-    mock_valuation_response.candidates[0].content.parts = [MagicMock(text="Some text")]
-
-    mock_generate_content.side_effect = [
-        mock_valuation_response,
-        mock_final_response,
+def test_estimate_value_image_data_success(mock_google_cloud_clients_and_app) -> None:
+    _, _, mock_genai_client = mock_google_cloud_clients_and_app
+    mock_models = mock_genai_client.models
+    mock_models.generate_content.side_effect = [
+        MagicMock(
+            candidates=[
+                MagicMock(
+                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
+                ),
+            ],
+        ),
+        MagicMock(
+            text=f'{{"estimated_value": 100.0, "currency": "{DEFAULT_CURRENCY}", "reasoning": "Looks good", "search_urls": ["example.com"]}}',
+        ),
     ]
 
     image_data = b"fake image data"
@@ -85,185 +83,176 @@ def test_estimate_value_image_data_success(mock_generate_content):
         description="Test item with data",
         image_data=image_data,
         mime_type="image/jpeg",
+        client=mock_genai_client,
     )
 
     assert response.estimated_value == 100.0
     assert response.currency == Currency(DEFAULT_CURRENCY)
     assert response.reasoning == "Looks good"
     assert response.search_urls == ["example.com"]
-    assert mock_generate_content.call_count == 2
+    assert mock_models.generate_content.call_count == 2
 
 
 @patch("main.estimate_value")
-def test_estimate_value_raises_exception_no_image(mock_estimate_value):
+def test_estimate_value_raises_exception_no_image(mock_estimate_value) -> None:
     mock_estimate_value.side_effect = ValueError(
-        "Must provide either image_uri or image_data"
+        "Must provide either image_uri or image_data",
     )
     with pytest.raises(ValueError) as exc_info:
         estimate_value(
-            image_uri=None, description="Test", image_data=None, mime_type=None
+            image_uri=None,
+            description="Test",
+            image_data=None,
+            mime_type=None,
+            client=MagicMock(),
         )
     assert str(exc_info.value) == "Must provide either image_uri or image_data"
 
 
-@patch("main.client.models.generate_content")
-def test_estimate_value_valuation_api_error(mock_generate_content):
-    # Mock the first generate_content call (valuation) to raise an API error
-    from google.api_core.exceptions import GoogleAPIError
-
-    mock_generate_content.side_effect = GoogleAPIError("Gemini API error")
+def test_estimate_value_valuation_api_error(mock_google_cloud_clients_and_app) -> None:
+    _, _, mock_genai_client = mock_google_cloud_clients_and_app
+    mock_genai_client.models.generate_content.side_effect = GoogleAPIError(
+        "Gemini API error",
+    )
 
     with pytest.raises(GoogleAPIError) as exc_info:
         estimate_value(
-            image_uri="gs://some_bucket/some_image.jpg", description="A test item"
+            image_uri="gs://some_bucket/some_image.jpg",
+            description="A test item",
+            client=mock_genai_client,
         )
     assert str(exc_info.value) == "Gemini API error"
 
 
-@patch("main.client.models.generate_content")
-def test_estimate_value_parsing_api_error(mock_generate_content):
-    # Mock the first generate_content call (valuation)
-    mock_response_with_search = MagicMock()
-    mock_response_with_search.candidates = [MagicMock()]
-    mock_response_with_search.candidates[0].content.parts = [
+def test_estimate_value_parsing_api_error(mock_google_cloud_clients_and_app) -> None:
+    _, _, mock_genai_client = mock_google_cloud_clients_and_app
+    mock_genai_client.models.generate_content.side_effect = [
         MagicMock(
-            text="Estimated value: $100, Reasoning: Looks good, Search URLs: [example.com]"
-        )
-    ]
-
-    # Mock the second generate_content call (parsing) to raise an API error
-    from google.api_core.exceptions import GoogleAPIError
-
-    mock_generate_content.side_effect = [
-        mock_response_with_search,
+            candidates=[
+                MagicMock(
+                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
+                ),
+            ],
+        ),
         GoogleAPIError("Gemini API error during parsing"),
     ]
 
     with pytest.raises(GoogleAPIError) as exc_info:
         estimate_value(
-            image_uri="gs://some_bucket/some_image.jpg", description="A test item"
+            image_uri="gs://some_bucket/some_image.jpg",
+            description="A test item",
+            client=mock_genai_client,
         )
     assert str(exc_info.value) == "Gemini API error during parsing"
 
 
-@patch("main.client.models.generate_content")
-def test_estimate_value_malformed_json_response(mock_generate_content):
-    # Simulate the final parsing call returning malformed JSON
-    mock_final_response = MagicMock()
-    mock_final_response.text = (
-        '{"wrong_field": "some value", "currency": "USD"}'  # Missing required fields
-    )
-
-    # The first call can be a simple mock
-    mock_valuation_response = MagicMock()
-    mock_valuation_response.candidates = [MagicMock()]
-    mock_valuation_response.candidates[0].content.parts = [MagicMock(text="Some text")]
-
-    mock_generate_content.side_effect = [
-        mock_valuation_response,
-        mock_final_response,
+def test_estimate_value_malformed_json_response(
+    mock_google_cloud_clients_and_app,
+) -> None:
+    _, _, mock_genai_client = mock_google_cloud_clients_and_app
+    mock_genai_client.models.generate_content.side_effect = [
+        MagicMock(
+            candidates=[
+                MagicMock(
+                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
+                ),
+            ],
+        ),
+        MagicMock(text='{"wrong_field": "some value", "currency": "USD"}'),
     ]
-
-    from pydantic import ValidationError
 
     with pytest.raises(ValidationError):
         estimate_value(
-            image_uri="gs://some_bucket/some_image.jpg", description="A test item"
+            image_uri="gs://some_bucket/some_image.jpg",
+            description="A test item",
+            client=mock_genai_client,
         )
 
 
-@patch("main.client.models.generate_content")
-def test_estimate_value_invalid_search_urls(mock_generate_content):
-    # Simulate the final parsing call returning invalid search_urls type
-    mock_final_response = MagicMock()
-    mock_final_response.text = '{"estimated_value": 100.0, "currency": "USD", "reasoning": "Looks good", "search_urls": "not-a-list"}'
-
-    # The first call can be a simple mock
-    mock_valuation_response = MagicMock()
-    mock_valuation_response.candidates = [MagicMock()]
-    mock_valuation_response.candidates[0].content.parts = [MagicMock(text="Some text")]
-
-    mock_generate_content.side_effect = [
-        mock_valuation_response,
-        mock_final_response,
+def test_estimate_value_invalid_search_urls(mock_google_cloud_clients_and_app) -> None:
+    _, _, mock_genai_client = mock_google_cloud_clients_and_app
+    mock_genai_client.models.generate_content.side_effect = [
+        MagicMock(
+            candidates=[
+                MagicMock(
+                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
+                ),
+            ],
+        ),
+        MagicMock(
+            text='{"estimated_value": 100.0, "currency": "USD", "reasoning": "Looks good", "search_urls": "not-a-list"}',
+        ),
     ]
-
-    from pydantic import ValidationError
 
     with pytest.raises(ValidationError):
         estimate_value(
-            image_uri="gs://some_bucket/some_image.jpg", description="A test item"
+            image_uri="gs://some_bucket/some_image.jpg",
+            description="A test item",
+            client=mock_genai_client,
         )
 
 
-@patch("main.client.models.generate_content")
-def test_estimate_value_invalid_estimated_value(mock_generate_content):
-    # Simulate the final parsing call returning invalid estimated_value type
-    mock_final_response = MagicMock()
-    mock_final_response.text = '{"estimated_value": "not-a-number", "currency": "USD", "reasoning": "Looks good", "search_urls": ["example.com"]}'
-
-    # The first call can be a simple mock
-    mock_valuation_response = MagicMock()
-    mock_valuation_response.candidates = [MagicMock()]
-    mock_valuation_response.candidates[0].content.parts = [MagicMock(text="Some text")]
-
-    mock_generate_content.side_effect = [
-        mock_valuation_response,
-        mock_final_response,
+def test_estimate_value_invalid_estimated_value(
+    mock_google_cloud_clients_and_app,
+) -> None:
+    _, _, mock_genai_client = mock_google_cloud_clients_and_app
+    mock_genai_client.models.generate_content.side_effect = [
+        MagicMock(
+            candidates=[
+                MagicMock(
+                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
+                ),
+            ],
+        ),
+        MagicMock(
+            text='{"estimated_value": "not-a-number", "currency": "USD", "reasoning": "Looks good", "search_urls": ["example.com"]}',
+        ),
     ]
-
-    from pydantic import ValidationError
 
     with pytest.raises(ValidationError):
         estimate_value(
-            image_uri="gs://some_bucket/some_image.jpg", description="A test item"
+            image_uri="gs://some_bucket/some_image.jpg",
+            description="A test item",
+            client=mock_genai_client,
         )
 
 
 @freeze_time("2023-01-01 12:00:00")
-@patch("main.STORAGE_BUCKET", "test-bucket")
-@patch("main.storage_client.bucket")
-def test_upload_image_to_gcs(mock_bucket_method):
-    """
-    Tests the image upload functionality to Google Cloud Storage.
-
-    The `mock_bucket_method` is a patch on `main.storage_client.bucket`,
-    which is called with the bucket name. It returns a mock bucket object
-    that can be further inspected for calls to `blob` and `upload_from_file`.
-    """
-    mock_bucket = MagicMock()
+def test_upload_image_to_gcs(mock_google_cloud_clients_and_app) -> None:
+    """Tests the image upload functionality to Google Cloud Storage."""
+    _, mock_storage_client, _ = mock_google_cloud_clients_and_app
+    mock_bucket = mock_storage_client.bucket.return_value
     mock_bucket.name = "test-bucket"
-    mock_bucket_method.return_value = mock_bucket
+    mock_blob = mock_bucket.blob.return_value
 
-    mock_blob = MagicMock()
-    mock_bucket.blob.return_value = mock_blob
+    with patch("main.STORAGE_BUCKET", "test-bucket"):
+        file_content = b"fake image content"
+        mock_file = MagicMock()
+        mock_file.filename = "test.jpg"
+        mock_file.content_type = "image/jpeg"
+        mock_file.file = io.BytesIO(file_content)
 
-    file_content = b"fake image content"
-    mock_file = MagicMock()
-    mock_file.filename = "test.jpg"
-    mock_file.content_type = "image/jpeg"
-    mock_file.file = io.BytesIO(file_content)
+        gcs_uri = upload_image_to_gcs(mock_file, mock_storage_client)
 
-    gcs_uri = upload_image_to_gcs(mock_file)
+        expected_filename = "20230101120000000000_test.jpg"
+        expected_uri = f"gs://{mock_bucket.name}/{expected_filename}"
 
-    # With frozen time, we can assert the exact filename
-    expected_filename = "20230101120000000000_test.jpg"
-    expected_uri = f"gs://{mock_bucket.name}/{expected_filename}"
-
-    assert gcs_uri == expected_uri
-    mock_bucket_method.assert_called_once_with("test-bucket")
-    mock_bucket.blob.assert_called_once_with(expected_filename)
-    mock_blob.upload_from_file.assert_called_once_with(
-        mock_file.file, content_type="image/jpeg"
-    )
-
-
-client = TestClient(app)
+        assert gcs_uri == expected_uri
+        mock_storage_client.bucket.assert_called_once_with("test-bucket")
+        mock_bucket.blob.assert_called_once_with(expected_filename)
+        mock_blob.upload_from_file.assert_called_once_with(
+            mock_file.file,
+            content_type="image/jpeg",
+        )
 
 
 @patch("main.STORAGE_BUCKET", "test-bucket")
 @patch("main.upload_image_to_gcs")
-def test_upload_image_endpoint_success_with_gcs(mock_upload_image_to_gcs):
+def test_upload_image_endpoint_success_with_gcs(
+    mock_upload_image_to_gcs,
+    mock_google_cloud_clients_and_app,
+) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
     mock_upload_image_to_gcs.return_value = "gs://test-bucket/test.jpg"
     test_image_content = b"fake image content"
     response = client.post(
@@ -281,7 +270,11 @@ def test_upload_image_endpoint_success_with_gcs(mock_upload_image_to_gcs):
 
 @patch("main.STORAGE_BUCKET", None)
 @patch("main.upload_image_to_gcs")  # Still mock to ensure it's NOT called
-def test_upload_image_no_storage_bucket(mock_upload_image_to_gcs_not_called):
+def test_upload_image_no_storage_bucket(
+    mock_upload_image_to_gcs_not_called,
+    mock_google_cloud_clients_and_app,
+) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
     test_image_content = b"fake image content"
     response = client.post(
         "/upload-image",
@@ -301,7 +294,11 @@ def test_upload_image_no_storage_bucket(mock_upload_image_to_gcs_not_called):
 
 @patch("main.STORAGE_BUCKET", "test-bucket")  # Ensure STORAGE_BUCKET is set
 @patch("main.upload_image_to_gcs")
-def test_upload_image_gcs_upload_fails(mock_upload_image_to_gcs):
+def test_upload_image_gcs_upload_fails(
+    mock_upload_image_to_gcs,
+    mock_google_cloud_clients_and_app,
+) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
     mock_upload_image_to_gcs.side_effect = Exception("GCS upload failed")
     test_image_content = b"fake image content"
     response = client.post(
@@ -313,22 +310,27 @@ def test_upload_image_gcs_upload_fails(mock_upload_image_to_gcs):
     mock_upload_image_to_gcs.assert_called_once()
 
 
-def test_upload_image_invalid_type():
+def test_upload_image_invalid_type(mock_google_cloud_clients_and_app) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
     response = client.post(
         "/upload-image",
         files={"image_file": ("test.txt", b"not an image", "text/plain")},
     )
     assert response.status_code == 400
     assert response.json() == {
-        "detail": "Invalid image file type. Please upload an image."
+        "detail": "Invalid image file type. Please upload an image.",
     }
 
 
 @patch("main.estimate_value")
-def test_value_endpoint_success_gbp(mock_estimate_value):
+def test_value_endpoint_success_gbp(
+    mock_estimate_value,
+    mock_google_cloud_clients_and_app,
+) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
     mock_estimate_value.return_value = ValuationResponse(
         estimated_value=123.45,
-        currency=Currency.GBP,  # Test with GBP
+        currency=Currency.GBP,
         reasoning="Looks nice",
         search_urls=["http://example.com"],
     )
@@ -338,7 +340,7 @@ def test_value_endpoint_success_gbp(mock_estimate_value):
             "description": "A test item",
             "image_data": "data:image/jpeg;base64,ZmFrZSBpbWFnZSBjb250ZW50",
             "content_type": "image/jpeg",
-            "currency": "GBP",  # Pass GBP in form data
+            "currency": "GBP",
         },
     )
     assert response.status_code == 200
@@ -351,6 +353,7 @@ def test_value_endpoint_success_gbp(mock_estimate_value):
     mock_estimate_value.assert_called_once_with(
         image_uri=None,
         description="A test item",
+        client=ANY,
         image_data=b"fake image content",
         mime_type="image/jpeg",
         currency=Currency.GBP,
@@ -358,7 +361,11 @@ def test_value_endpoint_success_gbp(mock_estimate_value):
 
 
 @patch("main.estimate_value")
-def test_value_endpoint_success_image_url(mock_estimate_value):
+def test_value_endpoint_success_image_url(
+    mock_estimate_value,
+    mock_google_cloud_clients_and_app,
+) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
     mock_estimate_value.return_value = ValuationResponse(
         estimated_value=123.45,
         currency=Currency.USD,
@@ -370,7 +377,6 @@ def test_value_endpoint_success_image_url(mock_estimate_value):
         data={
             "description": "A test item from URL",
             "image_url": "gs://test-bucket/test_image.jpg",
-            # No image_data
         },
     )
     assert response.status_code == 200
@@ -383,6 +389,7 @@ def test_value_endpoint_success_image_url(mock_estimate_value):
     mock_estimate_value.assert_called_once_with(
         image_uri="gs://test-bucket/test_image.jpg",
         description="A test item from URL",
+        client=ANY,
         image_data=None,
         mime_type=None,
         currency=Currency(DEFAULT_CURRENCY),
@@ -390,7 +397,11 @@ def test_value_endpoint_success_image_url(mock_estimate_value):
 
 
 @patch("main.estimate_value")
-def test_value_endpoint_empty_url_prioritizes_image_data(mock_estimate_value):
+def test_value_endpoint_empty_url_prioritizes_image_data(
+    mock_estimate_value,
+    mock_google_cloud_clients_and_app,
+) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
     mock_estimate_value.return_value = ValuationResponse(
         estimated_value=50.0,
         currency=Currency.CAD,
@@ -401,8 +412,8 @@ def test_value_endpoint_empty_url_prioritizes_image_data(mock_estimate_value):
         "/value",
         data={
             "description": "A test item with empty URL",
-            "image_url": "",  # Empty image_url
-            "image_data": "data:image/png;base64,ZmFrZSBpbWFnZSBkYXRh",  # Fake png data
+            "image_url": "",
+            "image_data": "data:image/png;base64,ZmFrZSBpbWFnZSBkYXRh",
             "content_type": "image/png",
             "currency": "CAD",
         },
@@ -417,6 +428,7 @@ def test_value_endpoint_empty_url_prioritizes_image_data(mock_estimate_value):
     mock_estimate_value.assert_called_once_with(
         image_uri="",
         description="A test item with empty URL",
+        client=ANY,
         image_data=b"fake image data",
         mime_type="image/png",
         currency=Currency.CAD,
@@ -424,7 +436,11 @@ def test_value_endpoint_empty_url_prioritizes_image_data(mock_estimate_value):
 
 
 @patch("main.estimate_value")
-def test_value_endpoint_both_inputs_prioritizes_url(mock_estimate_value):
+def test_value_endpoint_both_inputs_prioritizes_url(
+    mock_estimate_value,
+    mock_google_cloud_clients_and_app,
+) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
     mock_estimate_value.return_value = ValuationResponse(
         estimated_value=200.0,
         currency=Currency.JPY,
@@ -436,8 +452,8 @@ def test_value_endpoint_both_inputs_prioritizes_url(mock_estimate_value):
         data={
             "description": "A test item with both URL and data",
             "image_url": "gs://test-bucket/preferred_image.jpg",
-            "image_data": "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",  # Minimal GIF
-            "content_type": "image/gif",  # Relates to image_data
+            "image_data": "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+            "content_type": "image/gif",
             "currency": "JPY",
         },
     )
@@ -457,6 +473,7 @@ def test_value_endpoint_both_inputs_prioritizes_url(mock_estimate_value):
     mock_estimate_value.assert_called_once_with(
         image_uri="gs://test-bucket/preferred_image.jpg",
         description="A test item with both URL and data",
+        client=ANY,
         image_data=image_data_bytes,
         mime_type="image/gif",
         currency=Currency.JPY,
@@ -464,7 +481,11 @@ def test_value_endpoint_both_inputs_prioritizes_url(mock_estimate_value):
 
 
 @patch("main.estimate_value")
-def test_value_endpoint_estimate_value_exception(mock_estimate_value):
+def test_value_endpoint_estimate_value_exception(
+    mock_estimate_value,
+    mock_google_cloud_clients_and_app,
+) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
     mock_estimate_value.side_effect = Exception("Something went wrong")
     response = client.post(
         "/value",
@@ -479,33 +500,38 @@ def test_value_endpoint_estimate_value_exception(mock_estimate_value):
     mock_estimate_value.assert_called_once()
 
 
-def test_value_endpoint_no_image_provided():
+def test_value_endpoint_no_image_provided(mock_google_cloud_clients_and_app) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
     response = client.post("/value", data={"description": "A test item"})
     assert response.status_code == 400
     assert response.json() == {"detail": "Either image_url or image_data is required."}
 
 
-def _assert_html_contains_currency(response, currency):
+def _assert_html_contains_currency(response, currency) -> None:
     """Helper to check for currency in the root HTML response."""
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert f"let defaultCurrency = '{currency}';" in response.text
 
 
-def test_read_root_serves_html_with_default_currency():
-    # Temporarily patch DEFAULT_CURRENCY for this test to ensure we check a specific value
+def test_read_root_serves_html_with_default_currency(
+    mock_google_cloud_clients_and_app,
+) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
     with patch("main.DEFAULT_CURRENCY", "XYZ"):
         response = client.get("/")
         _assert_html_contains_currency(response, "XYZ")
 
 
-def test_health_check():
+def test_health_check(mock_google_cloud_clients_and_app) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "healthy"}
 
 
-def test_value_endpoint_invalid_currency():
+def test_value_endpoint_invalid_currency(mock_google_cloud_clients_and_app) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
     response = client.post(
         "/value",
         data={
@@ -521,26 +547,23 @@ def test_value_endpoint_invalid_currency():
     assert "Input should be 'USD', 'EUR', 'GBP', 'JPY' or 'CAD'" in response.text
 
 
-@patch("main.client.models.generate_content")
-def test_value_endpoint_integration_style(mock_generate_content):
-    """
-    Tests the /value endpoint all the way down to the Gemini client mock,
+def test_value_endpoint_integration_style(mock_google_cloud_clients_and_app) -> None:
+    """Tests the /value endpoint all the way down to the Gemini client mock,
     without mocking the intermediate estimate_value function.
     """
-    # Mock the final JSON response from the parsing call
-    mock_final_response = MagicMock()
-    mock_final_response.text = '{"estimated_value": 99.99, "currency": "USD", "reasoning": "Integration test success", "search_urls": []}'
-
-    # Mock the initial valuation call
-    mock_valuation_response = MagicMock()
-    mock_valuation_response.candidates = [MagicMock()]
-    mock_valuation_response.candidates[0].content.parts = [
-        MagicMock(text="Some valuation text")
-    ]
-
-    mock_generate_content.side_effect = [
-        mock_valuation_response,
-        mock_final_response,
+    client, _, mock_genai_client = mock_google_cloud_clients_and_app
+    mock_models = mock_genai_client.models
+    mock_models.generate_content.side_effect = [
+        MagicMock(
+            candidates=[
+                MagicMock(
+                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
+                ),
+            ],
+        ),
+        MagicMock(
+            text='{"estimated_value": 99.99, "currency": "USD", "reasoning": "Integration test success", "search_urls": []}',
+        ),
     ]
 
     response = client.post(
@@ -560,4 +583,4 @@ def test_value_endpoint_integration_style(mock_generate_content):
         "reasoning": "Integration test success",
         "search_urls": [],
     }
-    assert mock_generate_content.call_count == 2
+    assert mock_models.generate_content.call_count == 2

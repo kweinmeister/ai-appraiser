@@ -1,18 +1,19 @@
-import pytest
 from unittest.mock import patch
 
+import pytest
+from fastapi.testclient import TestClient
 
-@pytest.fixture(scope="session", autouse=True)
-def mock_google_cloud_clients():
-    # Mock storage.Client
-    storage_patcher = patch("main.storage.Client", autospec=True)
-    mock_storage_client = storage_patcher.start()
+# Import the app from main
+from main import app
 
-    # Mock genai.Client
-    genai_patcher = patch("main.genai.Client", autospec=True)
-    mock_genai_client = genai_patcher.start()
 
-    yield mock_storage_client, mock_genai_client
-
-    storage_patcher.stop()
-    genai_patcher.stop()
+@pytest.fixture
+def mock_google_cloud_clients_and_app():
+    """A fixture that patches Google Cloud clients and provides a TestClient
+    with a properly managed lifespan.
+    """
+    with patch("main.storage.Client", autospec=True) as MockStorageClient, patch(
+        "main.genai.Client",
+        autospec=True,
+    ) as MockGenaiClient, TestClient(app) as test_client:
+        yield test_client, MockStorageClient.return_value, MockGenaiClient.return_value
