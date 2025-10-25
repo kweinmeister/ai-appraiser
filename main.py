@@ -265,7 +265,9 @@ async def estimate_item_value(
             description=description,
             client=client,
             image_data=(
-                base64.b64decode(image_data.split(",", 1)[1]) if image_data else None
+                base64.b64decode(image_data.split(",", 1)[1])
+                if image_data and not image_url
+                else None
             ),
             mime_type=content_type,
             currency=currency,
