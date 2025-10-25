@@ -93,12 +93,9 @@ def test_estimate_value_image_data_success(mock_google_cloud_clients_and_app) ->
     assert mock_models.generate_content.call_count == 2
 
 
-@patch("main.estimate_value")
-def test_estimate_value_raises_exception_no_image(mock_estimate_value) -> None:
-    mock_estimate_value.side_effect = ValueError(
-        "Must provide either image_uri or image_data",
-    )
-    with pytest.raises(ValueError) as exc_info:
+def test_estimate_value_raises_exception_no_image() -> None:
+    """Tests that estimate_value raises a ValueError when no image is provided."""
+    with pytest.raises(ValueError, match="Must provide either image_uri or image_data"):
         estimate_value(
             image_uri=None,
             description="Test",
@@ -106,7 +103,6 @@ def test_estimate_value_raises_exception_no_image(mock_estimate_value) -> None:
             mime_type=None,
             client=MagicMock(),
         )
-    assert str(exc_info.value) == "Must provide either image_uri or image_data"
 
 
 def test_estimate_value_valuation_api_error(mock_google_cloud_clients_and_app) -> None:

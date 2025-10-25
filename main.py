@@ -66,7 +66,9 @@ async def lifespan(app: FastAPI):
     """Initializes the Google Cloud clients on startup and stores them in the app state."""
     app.state.storage_client = storage.Client(project=PROJECT_ID)
     app.state.client = genai.Client(
-        vertexai=True, project=PROJECT_ID, location=LOCATION
+        vertexai=True,
+        project=PROJECT_ID,
+        location=LOCATION,
     )
     yield
 
@@ -167,7 +169,7 @@ Return a text response only, not an executable code response.
         raise ValueError(msg)
 
     # Use final part of search results with answer
-    valuation_text = "Error estimating value: no text response."
+    valuation_text = None
     if (
         response_with_search
         and response_with_search.candidates
@@ -177,6 +179,11 @@ Return a text response only, not an executable code response.
         for part in response_with_search.candidates[0].content.parts:
             if part.text:
                 valuation_text = part.text
+                break
+
+    if not valuation_text:
+        msg = "Failed to get a text response from the valuation model."
+        raise ValueError(msg)
 
     # Second Gemini call to parse the valuation string into a ValuationResponse
     config_for_parsing = GenerateContentConfig(
