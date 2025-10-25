@@ -95,7 +95,11 @@ def upload_image_to_gcs(file: UploadFile, storage_client: storage.Client) -> str
     # Ensure filename is not None before securing it
     if not file.filename:
         file.filename = "unknown_file"
-    filename = f"{timestamp}_{secure_filename(file.filename)}"
+    safe_filename = secure_filename(file.filename)
+    # Truncate filename to prevent object names from exceeding GCS limits.
+    max_len = 220
+    truncated_filename = safe_filename[:max_len]
+    filename = f"{timestamp}_{truncated_filename}"
     blob = bucket.blob(filename)
 
     try:
