@@ -212,7 +212,14 @@ Ensure the JSON is valid and contains the estimated_value, currency (using ISO 4
         msg = "Failed to get a valid JSON response from the parsing model."
         raise ValueError(msg)
 
-    return ValuationResponse.model_validate_json(valuation_response_text)
+    validated_response = ValuationResponse.model_validate_json(valuation_response_text)
+    if validated_response.currency != currency:
+        logging.warning(
+            "Model returned currency '%s' but '%s' was requested.",
+            validated_response.currency.value,
+            currency.value,
+        )
+    return validated_response
 
 
 # --- API Endpoints ---
