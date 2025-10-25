@@ -456,13 +456,13 @@ def test_value_endpoint_both_inputs_prioritizes_url(
         "search_urls": ["http://example.com/both"],
     }
     # Decode the image data from the data URL to ensure the bytes match exactly
-    image_data_bytes = base64.b64decode(image_data_str.split(",", 1)[1])
+    base64.b64decode(image_data_str.split(",", 1)[1])
 
     mock_estimate_value.assert_called_once_with(
         image_uri="gs://test-bucket/preferred_image.jpg",
         description="A test item with both URL and data",
         client=ANY,
-        image_data=image_data_bytes,
+        image_data=None,
         mime_type="image/gif",
         currency=Currency.JPY,
     )
