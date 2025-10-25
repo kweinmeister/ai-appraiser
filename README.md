@@ -35,7 +35,7 @@ The AI Appraiser application follows a client-server architecture:
 
 ## Prerequisites
 
-- Python 3.10+ with `pip`
+- Python 3.11+ with `pip`
 - A Google Cloud project with billing enabled. and `Vertex AI` and `Cloud Storage` APIs enabled
 - Set up Application Default Credentials (ADC) for your Google Cloud project. You can do this by running `gcloud auth application-default login` in your terminal.
 - (Optional) If storing images in Google Cloud Storage, configure a Google Cloud service account with the necessary permissions (`storage.objects.create` and `storage.objects.get`). You can find instructions on creating and managing service accounts in the [Google Cloud documentation](https://cloud.google.com/iam/docs/service-accounts).

@@ -4,6 +4,7 @@ import base64
 import datetime
 import logging
 import os
+import pathlib
 from contextlib import asynccontextmanager
 from enum import Enum
 from mimetypes import guess_type
@@ -145,8 +146,9 @@ Include the URLs of the most relevant search results you used to arrive at your 
 
 Return a text response only, not an executable code response.
 """
-    google_search_tool = Tool(google_search=GoogleSearch())
-    config_with_search = GenerateContentConfig(tools=[google_search_tool])
+    config_with_search = GenerateContentConfig(
+        tools=[Tool(google_search=GoogleSearch())]
+    )
 
     if image_uri:
         response_with_search = client.models.generate_content(
@@ -296,7 +298,7 @@ async def estimate_item_value(
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    with open("index.html") as f:
+    with open(pathlib.Path(__file__).parent / "index.html") as f:
         html_content = f.read()
     html_content = html_content.replace(
         "let defaultCurrency = 'USD';",
