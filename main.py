@@ -16,6 +16,7 @@ from google.cloud import storage
 from google.genai.types import GenerateContentConfig, GoogleSearch, Part, Tool
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
+from werkzeug.utils import secure_filename
 
 # --- Configuration ---
 logging.basicConfig(level=logging.INFO)
@@ -29,7 +30,7 @@ STORAGE_BUCKET = os.environ.get("STORAGE_BUCKET")
 DEFAULT_CURRENCY = os.environ.get(
     "CURRENCY",
     "USD",
-)  # Changed to uppercase for consistency
+)
 if not STORAGE_BUCKET:
     logging.warning(
         "STORAGE_BUCKET environment variable not set. Image uploads to GCS will be skipped.",
@@ -43,11 +44,6 @@ class Currency(str, Enum):
     GBP = "GBP"
     JPY = "JPY"
     CAD = "CAD"
-
-
-class ValuationRequest(BaseModel):
-    description: str = Form(...)
-    currency: Currency = Form(Currency(DEFAULT_CURRENCY))
 
 
 class ValuationResponse(BaseModel):
@@ -93,9 +89,13 @@ def get_genai_client(request: Request) -> genai.Client:
 # --- Helper Functions ---
 def upload_image_to_gcs(file: UploadFile, storage_client: storage.Client) -> str:
     """Uploads an image file to Google Cloud Storage and returns the GCS URI."""
+    assert storage_client is not None
     bucket = storage_client.bucket(STORAGE_BUCKET)
     timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d%H%M%S%f")
-    filename = f"{timestamp}_{file.filename}"
+    # Ensure filename is not None before securing it
+    if not file.filename:
+        file.filename = "unknown_file"
+    filename = f"{timestamp}_{secure_filename(file.filename)}"
     blob = bucket.blob(filename)
 
     try:
@@ -122,6 +122,7 @@ def estimate_value(
     currency: Currency = Currency(DEFAULT_CURRENCY),
 ) -> ValuationResponse:
     """Calls Gemini API with Search Tool to estimate item value, then parses the result into a ValuationResponse."""
+    assert client is not None
     valuation_prompt = f"""You are a professional appraiser, adept at determining the value of items based on their description and market data.
 Here is additional information provided by the user: {description}.
 Your task is to estimate the item's fair market value.
