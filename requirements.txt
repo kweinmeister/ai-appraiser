@@ -1,8 +1,10 @@
-fastapi[standard]==0.115.8
-google-cloud-storage==3.0.0
-google-genai==1.2.0
-uvicorn==0.34.0
-pydantic==2.10.6
-python-dotenv==1.0.1
+fastapi[standard]==0.120.0
+freezegun==1.5.5
+google-cloud-storage==3.4.1
+google-genai==1.46.0
+uvicorn==0.38.0
+pydantic==2.12.3
+python-dotenv==1.1.1
 python-multipart==0.0.20
-pytest==8.3.4
+pytest==8.4.2
+werkzeug==3.1.3

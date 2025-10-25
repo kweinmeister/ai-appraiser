@@ -1,5 +1,7 @@
 # AI Appraiser
 
+[![Python Tests](https://github.com/kweinmeister/ai-appraiser/actions/workflows/python-tests.yml/badge.svg)](https://github.com/kweinmeister/ai-appraiser/actions/workflows/python-tests.yml)
+
 ![AI Appraiser GIF](ai-appraiser.gif)
 
 This application estimates the value of an item from an image. It leverages Google's [Gemini](https://ai.google.dev/gemini-api/docs) model with integrated [Grounding with Google Search](https://ai.google.dev/gemini-api/docs/grounding) capabilities to improve the accuracy of valuations.
@@ -33,7 +35,7 @@ The AI Appraiser application follows a client-server architecture:
 
 ## Prerequisites
 
-- Python 3.9+ with `pip`
+- Python 3.11+ with `pip`
 - A Google Cloud project with billing enabled. and `Vertex AI` and `Cloud Storage` APIs enabled
 - Set up Application Default Credentials (ADC) for your Google Cloud project. You can do this by running `gcloud auth application-default login` in your terminal.
 - (Optional) If storing images in Google Cloud Storage, configure a Google Cloud service account with the necessary permissions (`storage.objects.create` and `storage.objects.get`). You can find instructions on creating and managing service accounts in the [Google Cloud documentation](https://cloud.google.com/iam/docs/service-accounts).
@@ -95,5 +97,5 @@ The tests cover the core functionality of the application, including image uploa
 
 - **`GOOGLE_CLOUD_PROJECT`**: (Required) Your Google Cloud project ID.
 - **`LOCATION`**: (Optional) The Google Cloud region to use. Defaults to `us-central1`.
-- **`MODEL_ID`**: (Optional) The ID of the Gemini model to use. Defaults to `gemini-2.0-flash-001`.
+- **`MODEL_ID`**: (Optional) The ID of the Gemini model to use. Defaults to `gemini-2.5-flash`.
 - **`STORAGE_BUCKET`**: (Optional) The name of your Google Cloud Storage bucket for image uploads. If not set, image uploads to GCS will be skipped.
