@@ -28,7 +28,7 @@ def create_mock_gemini_responses(
     """Helper function to create mock Gemini API responses."""
     valuation_mock = MagicMock(
         candidates=[
-            MagicMock(content=MagicMock(parts=[MagicMock(text=valuation_text)]))
+            MagicMock(content=MagicMock(parts=[MagicMock(text=valuation_text)])),
         ],
     )
 

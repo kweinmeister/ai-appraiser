@@ -290,7 +290,7 @@ async def estimate_item_value(
             except Exception as e:
                 # Raise 400 on malformed image_data
                 raise HTTPException(
-                    status_code=400, detail="Invalid image_data format."
+                    status_code=400, detail="Invalid image_data format.",
                 ) from e
 
         response_data = estimate_value(
