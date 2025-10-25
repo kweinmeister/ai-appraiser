@@ -302,7 +302,9 @@ def test_upload_image_gcs_upload_fails(
         files={"image_file": ("test.jpg", test_image_content, "image/jpeg")},
     )
     assert response.status_code == 500
-    assert response.json() == {"detail": "Error uploading image: GCS upload failed"}
+    assert response.json() == {
+        "detail": "An error occurred while uploading the image.",
+    }
     mock_upload_image_to_gcs.assert_called_once()
 
 
@@ -393,7 +395,7 @@ def test_value_endpoint_success_image_url(
 
 
 @patch("main.estimate_value")
-def test_value_endpoint_empty_url_prioritizes_image_data(
+def test_value_endpoint_uses_image_data_when_url_is_empty(
     mock_estimate_value,
     mock_google_cloud_clients_and_app,
 ) -> None:
@@ -492,7 +494,7 @@ def test_value_endpoint_estimate_value_exception(
         },
     )
     assert response.status_code == 500
-    assert response.json() == {"detail": "Error: Something went wrong"}
+    assert response.json() == {"detail": "An internal error occurred during valuation."}
     mock_estimate_value.assert_called_once()
 
 

@@ -101,8 +101,8 @@ def upload_image_to_gcs(file: UploadFile, storage_client: storage.Client) -> str
     try:
         blob.upload_from_file(file.file, content_type=file.content_type)
         return f"gs://{STORAGE_BUCKET}/{filename}"
-    except Exception as e:
-        logging.exception(f"Error uploading image to Cloud Storage: {e}")
+    except Exception:
+        logging.exception("Error uploading image to Cloud Storage")
         raise
 
 
@@ -238,9 +238,12 @@ async def upload_image(
                 "content_type": image_file.content_type,
             },
         )
-    except Exception as e:
-        logging.exception(f"Error uploading image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error uploading image: {e}")
+    except Exception:
+        logging.exception("Error uploading image")
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while uploading the image.",
+        )
 
 
 @app.post("/value", response_model=ValuationResponse)
@@ -271,9 +274,12 @@ async def estimate_item_value(
             currency=currency,
         )
         return JSONResponse(content=response_data.model_dump())
-    except Exception as e:
-        logging.exception(f"Internal server error in /value: {e}")
-        raise HTTPException(status_code=500, detail=f"Error: {e}")
+    except Exception:
+        logging.exception("Internal server error in /value")
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred during valuation.",
+        )
 
 
 @app.get("/", response_class=HTMLResponse)
