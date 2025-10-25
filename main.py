@@ -99,9 +99,8 @@ def upload_image_to_gcs(file: UploadFile, storage_client: storage.Client) -> str
     bucket = storage_client.bucket(STORAGE_BUCKET)
     timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d%H%M%S%f")
     # Ensure filename is not None before securing it
-    if not file.filename:
-        file.filename = "unknown_file"
-    safe_filename = secure_filename(file.filename)
+    filename_to_secure = file.filename or "unknown_file"
+    safe_filename = secure_filename(filename_to_secure)
     # Truncate filename to prevent object names from exceeding GCS limits.
     truncated_filename = safe_filename[:GCS_FILENAME_MAX_LEN]
     filename = f"{timestamp}_{truncated_filename}"
@@ -281,13 +280,24 @@ async def estimate_item_value(
         )
 
     try:
+        decoded_image_data = None
+        # Only decode image_data if image_url is not provided.
+        if not image_url and image_data:
+            try:
+                # Split data URL and decode base64 content
+                _, encoded_data = image_data.split(",", 1)
+                decoded_image_data = base64.b64decode(encoded_data)
+            except Exception as e:
+                # Raise 400 on malformed image_data
+                raise HTTPException(
+                    status_code=400, detail="Invalid image_data format."
+                ) from e
+
         response_data = estimate_value(
             image_uri=image_url,
             description=description,
             client=client,
-            image_data=(
-                base64.b64decode(image_data.split(",", 1)[1]) if image_data else None
-            ),
+            image_data=decoded_image_data,
             mime_type=content_type,
             currency=currency,
         )
