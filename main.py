@@ -38,6 +38,11 @@ if not STORAGE_BUCKET:
     )
 
 
+# The GCS object name limit is 1024 bytes. The timestamp prefix is 26 bytes.
+# We truncate the user-provided filename to a safe length to avoid exceeding the limit.
+GCS_FILENAME_MAX_LEN = 220
+
+
 # --- Data Models ---
 class Currency(str, Enum):
     USD = "USD"
@@ -98,8 +103,7 @@ def upload_image_to_gcs(file: UploadFile, storage_client: storage.Client) -> str
         file.filename = "unknown_file"
     safe_filename = secure_filename(file.filename)
     # Truncate filename to prevent object names from exceeding GCS limits.
-    max_len = 220
-    truncated_filename = safe_filename[:max_len]
+    truncated_filename = safe_filename[:GCS_FILENAME_MAX_LEN]
     filename = f"{timestamp}_{truncated_filename}"
     blob = bucket.blob(filename)
 
@@ -147,7 +151,7 @@ Include the URLs of the most relevant search results you used to arrive at your 
 Return a text response only, not an executable code response.
 """
     config_with_search = GenerateContentConfig(
-        tools=[Tool(google_search=GoogleSearch())]
+        tools=[Tool(google_search=GoogleSearch())],
     )
 
     if image_uri:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 import io
 from unittest.mock import ANY, MagicMock, patch
@@ -17,6 +19,37 @@ from main import (
 )
 
 
+def create_mock_gemini_responses(
+    valuation_text="Some valuation text",
+    parsing_response_text: str | None = None,
+    parsing_response_dict: dict | None = None,
+    error: Exception | None = None,
+) -> list[MagicMock | Exception]:
+    """Helper function to create mock Gemini API responses."""
+    valuation_mock = MagicMock(
+        candidates=[
+            MagicMock(content=MagicMock(parts=[MagicMock(text=valuation_text)]))
+        ],
+    )
+
+    if error:
+        return [valuation_mock, error]
+
+    if parsing_response_text:
+        parsing_response = MagicMock(text=parsing_response_text)
+    elif parsing_response_dict:
+        import json
+
+        parsing_response = MagicMock(text=json.dumps(parsing_response_dict))
+    else:
+        # Default successful parsing response
+        parsing_response = MagicMock(
+            text=f'{{"estimated_value": 100.0, "currency": "{DEFAULT_CURRENCY}", "reasoning": "Looks good", "search_urls": ["example.com"]}}',
+        )
+
+    return [valuation_mock, parsing_response]
+
+
 def test_get_data_url_correct_format() -> None:
     # Create a custom mock for UploadFile
     file_content = b"fake image content"
@@ -34,18 +67,14 @@ def test_estimate_value_image_uri_success_eur(
 ) -> None:
     _, _, mock_genai_client = mock_google_cloud_clients_and_app
     mock_models = mock_genai_client.models
-    mock_models.generate_content.side_effect = [
-        MagicMock(
-            candidates=[
-                MagicMock(
-                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
-                ),
-            ],
-        ),
-        MagicMock(
-            text='{"estimated_value": 100.0, "currency": "EUR", "reasoning": "Looks good", "search_urls": ["example.com"]}',
-        ),
-    ]
+    mock_models.generate_content.side_effect = create_mock_gemini_responses(
+        parsing_response_dict={
+            "estimated_value": 100.0,
+            "currency": "EUR",
+            "reasoning": "Looks good",
+            "search_urls": ["example.com"],
+        },
+    )
 
     response = estimate_value(
         image_uri="gs://some_bucket/some_image.jpg",
@@ -64,18 +93,7 @@ def test_estimate_value_image_uri_success_eur(
 def test_estimate_value_image_data_success(mock_google_cloud_clients_and_app) -> None:
     _, _, mock_genai_client = mock_google_cloud_clients_and_app
     mock_models = mock_genai_client.models
-    mock_models.generate_content.side_effect = [
-        MagicMock(
-            candidates=[
-                MagicMock(
-                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
-                ),
-            ],
-        ),
-        MagicMock(
-            text=f'{{"estimated_value": 100.0, "currency": "{DEFAULT_CURRENCY}", "reasoning": "Looks good", "search_urls": ["example.com"]}}',
-        ),
-    ]
+    mock_models.generate_content.side_effect = create_mock_gemini_responses()
 
     image_data = b"fake image data"
     response = estimate_value(
@@ -122,16 +140,11 @@ def test_estimate_value_valuation_api_error(mock_google_cloud_clients_and_app) -
 
 def test_estimate_value_parsing_api_error(mock_google_cloud_clients_and_app) -> None:
     _, _, mock_genai_client = mock_google_cloud_clients_and_app
-    mock_genai_client.models.generate_content.side_effect = [
-        MagicMock(
-            candidates=[
-                MagicMock(
-                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
-                ),
-            ],
-        ),
-        GoogleAPIError("Gemini API error during parsing"),
-    ]
+    mock_genai_client.models.generate_content.side_effect = (
+        create_mock_gemini_responses(
+            error=GoogleAPIError("Gemini API error during parsing"),
+        )
+    )
 
     with pytest.raises(GoogleAPIError) as exc_info:
         estimate_value(
@@ -146,16 +159,11 @@ def test_estimate_value_malformed_json_response(
     mock_google_cloud_clients_and_app,
 ) -> None:
     _, _, mock_genai_client = mock_google_cloud_clients_and_app
-    mock_genai_client.models.generate_content.side_effect = [
-        MagicMock(
-            candidates=[
-                MagicMock(
-                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
-                ),
-            ],
-        ),
-        MagicMock(text='{"wrong_field": "some value", "currency": "USD"}'),
-    ]
+    mock_genai_client.models.generate_content.side_effect = (
+        create_mock_gemini_responses(
+            parsing_response_text='{"wrong_field": "some value", "currency": "USD"}',
+        )
+    )
 
     with pytest.raises(ValidationError):
         estimate_value(
@@ -167,18 +175,9 @@ def test_estimate_value_malformed_json_response(
 
 def test_estimate_value_invalid_search_urls(mock_google_cloud_clients_and_app) -> None:
     _, _, mock_genai_client = mock_google_cloud_clients_and_app
-    mock_genai_client.models.generate_content.side_effect = [
-        MagicMock(
-            candidates=[
-                MagicMock(
-                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
-                ),
-            ],
-        ),
-        MagicMock(
-            text='{"estimated_value": 100.0, "currency": "USD", "reasoning": "Looks good", "search_urls": "not-a-list"}',
-        ),
-    ]
+    mock_genai_client.models.generate_content.side_effect = create_mock_gemini_responses(
+        parsing_response_text='{"estimated_value": 100.0, "currency": "USD", "reasoning": "Looks good", "search_urls": "not-a-list"}',
+    )
 
     with pytest.raises(ValidationError):
         estimate_value(
@@ -192,18 +191,9 @@ def test_estimate_value_invalid_estimated_value(
     mock_google_cloud_clients_and_app,
 ) -> None:
     _, _, mock_genai_client = mock_google_cloud_clients_and_app
-    mock_genai_client.models.generate_content.side_effect = [
-        MagicMock(
-            candidates=[
-                MagicMock(
-                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
-                ),
-            ],
-        ),
-        MagicMock(
-            text='{"estimated_value": "not-a-number", "currency": "USD", "reasoning": "Looks good", "search_urls": ["example.com"]}',
-        ),
-    ]
+    mock_genai_client.models.generate_content.side_effect = create_mock_gemini_responses(
+        parsing_response_text='{"estimated_value": "not-a-number", "currency": "USD", "reasoning": "Looks good", "search_urls": ["example.com"]}',
+    )
 
     with pytest.raises(ValidationError):
         estimate_value(
@@ -445,12 +435,15 @@ def test_value_endpoint_both_inputs_prioritizes_url(
         reasoning="URL should be prioritized",
         search_urls=["http://example.com/both"],
     )
+    image_data_str = (
+        "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+    )
     response = client.post(
         "/value",
         data={
             "description": "A test item with both URL and data",
             "image_url": "gs://test-bucket/preferred_image.jpg",
-            "image_data": "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+            "image_data": image_data_str,
             "content_type": "image/gif",
             "currency": "JPY",
         },
@@ -463,9 +456,6 @@ def test_value_endpoint_both_inputs_prioritizes_url(
         "search_urls": ["http://example.com/both"],
     }
     # Decode the image data from the data URL to ensure the bytes match exactly
-    image_data_str = (
-        "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-    )
     image_data_bytes = base64.b64decode(image_data_str.split(",", 1)[1])
 
     mock_estimate_value.assert_called_once_with(
@@ -551,18 +541,14 @@ def test_value_endpoint_integration_style(mock_google_cloud_clients_and_app) -> 
     """
     client, _, mock_genai_client = mock_google_cloud_clients_and_app
     mock_models = mock_genai_client.models
-    mock_models.generate_content.side_effect = [
-        MagicMock(
-            candidates=[
-                MagicMock(
-                    content=MagicMock(parts=[MagicMock(text="Some valuation text")]),
-                ),
-            ],
-        ),
-        MagicMock(
-            text='{"estimated_value": 99.99, "currency": "USD", "reasoning": "Integration test success", "search_urls": []}',
-        ),
-    ]
+    mock_models.generate_content.side_effect = create_mock_gemini_responses(
+        parsing_response_dict={
+            "estimated_value": 99.99,
+            "currency": "USD",
+            "reasoning": "Integration test success",
+            "search_urls": [],
+        },
+    )
 
     response = client.post(
         "/value",
