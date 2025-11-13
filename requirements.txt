@@ -1,4 +1,4 @@
-fastapi[standard]==0.120.4
+fastapi[standard]==0.121.1
 freezegun==1.5.5
 google-cloud-storage==3.5.0
 google-genai==1.47.0
