@@ -6,5 +6,5 @@ uvicorn==0.38.0
 pydantic==2.12.5
 python-dotenv==1.2.1
 python-multipart==0.0.21
-pytest==9.0.1
+pytest==9.0.2
 werkzeug==3.1.4
