@@ -4,7 +4,7 @@ google-cloud-storage==3.8.0
 google-genai==1.66.0
 uvicorn==0.41.0
 pydantic==2.12.5
-python-dotenv==1.2.1
+python-dotenv==1.2.2
 python-multipart==0.0.22
 pytest==9.0.2
 werkzeug==3.1.6
