@@ -414,7 +414,7 @@ def test_value_endpoint_uses_image_data_when_url_is_empty(
         "search_urls": [],
     }
     mock_estimate_value.assert_called_once_with(
-        image_uri="",
+        image_uri=None,
         description="A test item with empty URL",
         client=ANY,
         image_data=b"fake image data",
