@@ -139,11 +139,10 @@
     <!-- Top Navigation Bar -->
     <nav class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl transition-all duration-300">
         <div class="flex justify-between items-center h-20 px-12 w-full max-w-[1440px] mx-auto">
-            <div class="text-xl font-bold tracking-tighter text-[#1a1c1c]">AI Appraiser</div>
+            <div class="text-xl font-bold tracking-tighter text-on-surface">AI Appraiser</div>
             <div
-                class="hidden md:flex gap-8 items-center font-['Plus_Jakarta_Sans'] font-medium text-sm tracking-tight border-b-2 border-[#0051C3]">
-                <a class="text-[#0051C3] font-bold pb-1" href="javascript:void(0)"
-                    onclick="location.reload()">Appraise</a>
+                class="hidden md:flex gap-8 items-center font-headline font-medium text-sm tracking-tight border-b-2 border-primary-container">
+                <button type="button" class="text-primary-container font-bold pb-1" onclick="location.reload()">Appraise</button>
             </div>
             <div class="hidden md:flex items-center gap-6"></div>
         </div>
@@ -350,7 +349,8 @@
     </template>
 
     <script>
-        const defaultCurrency = 'USD';
+        // biome-ignore lint/style/useConst: Default currency is replaced dynamically by backend string matching, must remain a 'let' declaration
+        let defaultCurrency = 'USD';
         let imageData = null;
         let contentType = null;
 
@@ -431,7 +431,8 @@
                         a.href = url;
                         a.target = "_blank";
                         a.className = "text-xs text-primary hover:text-primary-container bg-primary-fixed/30 py-4 px-6 rounded-xl truncate transition-colors flex items-center gap-3 font-medium border border-primary/10";
-                        a.innerHTML = `<span class="material-symbols-outlined text-[18px]" data-icon="link">link</span>${url}`;
+                        a.innerHTML = `<span class="material-symbols-outlined text-[18px]" data-icon="link">link</span> `;
+                        a.append(url);
                         linksContainer.appendChild(a);
                     });
                 }
