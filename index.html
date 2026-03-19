@@ -1,350 +1,467 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>AI Appraiser</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://unpkg.com/htmx.org@2"></script>
-    <script>
-      let defaultCurrency = 'USD';
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              clifford: "#da373d",
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container": "#eeeeee",
+                        "surface-tint": "#1357c9",
+                        "error": "#ba1a1a",
+                        "on-background": "#1a1c1c",
+                        "on-tertiary": "#ffffff",
+                        "surface-bright": "#faf9f9",
+                        "tertiary-container": "#0055b6",
+                        "surface": "#faf9f9",
+                        "primary-container": "#0051c3",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#001947",
+                        "secondary-fixed-dim": "#c8c6c6",
+                        "primary-fixed": "#dae2ff",
+                        "surface-container-highest": "#e2e2e2",
+                        "secondary-fixed": "#e4e2e1",
+                        "tertiary-fixed-dim": "#adc6ff",
+                        "on-tertiary-fixed": "#001a41",
+                        "primary-fixed-dim": "#b1c5ff",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#004494",
+                        "inverse-on-surface": "#f1f1f0",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#e2e2e2",
+                        "on-secondary-container": "#656464",
+                        "inverse-primary": "#b1c5ff",
+                        "background": "#faf9f9",
+                        "secondary": "#5f5e5e",
+                        "surface-container-low": "#f4f3f3",
+                        "on-secondary": "#ffffff",
+                        "surface-dim": "#dadada",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "tertiary-fixed": "#d8e2ff",
+                        "on-surface": "#1a1c1c",
+                        "tertiary": "#003e89",
+                        "primary": "#003b93",
+                        "on-primary": "#ffffff",
+                        "inverse-surface": "#2f3131",
+                        "on-primary-container": "#beceff",
+                        "outline": "#737785",
+                        "on-tertiary-container": "#bbd0ff",
+                        "outline-variant": "#c3c6d6",
+                        "secondary-container": "#e4e2e1",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface-variant": "#434653",
+                        "on-primary-fixed-variant": "#00419f",
+                        "surface-container-high": "#e8e8e8",
+                        "on-secondary-fixed-variant": "#474747"
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
             },
-          },
-        },
-      };
+        }
     </script>
-  </head>
-  <body class="bg-blue-50">
-    <div class="container mx-auto p-8 h-full">
-      <div class="bg-white p-8 rounded-lg shadow-md h-full">
-        <div class="flex items-center justify-between mb-8">
-          <h1 class="text-5xl font-semibold text-gray-800 font-sans">
-            AI Appraiser
-          </h1>
-          <p
-            class="text-gray-700 bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-2 rounded-lg shadow-md font-sans font-light text-lg"
-          >
-            Discover the value of any item with an image
-          </p>
-        </div>
-        <div
-          class="bg-gradient-to-r from-blue-500 to-blue-600 h-1 w-full mb-8 rounded-full"
-        ></div>
+    <style type="text/tailwindcss">
+        @layer components {
+            .card {
+                @apply bg-surface-container-low rounded-[1.5rem] p-8 lg:p-12 border border-black/5 shadow-sm;
+            }
+            .sidebar-card {
+                @apply bg-surface-container-low rounded-[1.5rem] p-8 border border-black/5;
+            }
+            .btn-primary {
+                @apply bg-gradient-to-br from-primary to-primary-container text-white h-14 px-8 rounded-full font-headline font-bold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/10 w-full sm:w-auto flex-1;
+            }
+            .btn-secondary {
+                @apply bg-secondary-container text-on-secondary-fixed-variant h-14 px-8 rounded-full font-headline font-bold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all w-full sm:w-auto cursor-pointer;
+            }
+            .form-input {
+                @apply bg-surface-container-lowest border border-transparent rounded-xl w-full py-4 px-6 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-body;
+            }
+            .form-label {
+                @apply block text-sm font-bold text-on-surface-variant uppercase tracking-widest mb-4;
+            }
+            .micro-label {
+                @apply text-[10px] uppercase tracking-[0.2em] font-bold text-on-surface-variant block;
+            }
+        }
+    </style>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            <div class="bg-gray-50 p-6 rounded-lg">
-              <h2 class="text-xl font-semibold text-gray-700 mb-4">
-                Item Input
-              </h2>
-              <div
-                id="image-preview"
-                class="mt-4 flex justify-center"
-                hx-swap="innerHTML"
-              >
-                <div
-                  id="image-preview-inner"
-                  class="border-dashed border-2 border-blue-400 rounded-lg w-96 h-96 flex items-center justify-center hover:bg-gray-100 transition hidden"
-                >
-                  <span class="text-gray-500 text-sm">Image Preview</span>
-                </div>
-              </div>
-              <div class="dropzone-container">
-                <div class="mb-6">
-                  <label
-                    class="block mb-2 text-sm font-medium text-gray-900 sr-only"
-                    for="image_file"
-                  >
-                    Upload file
-                  </label>
-                  <div class="flex items-center justify-center w-full">
-                    <label
-                      for="image_file"
-                      class="flex flex-col items-center justify-center w-64 h-64 border-2 border-blue-400 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 p-0"
-                    >
-                      <div class="flex flex-col items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke-width="1.5"
-                          stroke="currentColor"
-                          class="h-10 w-10 text-blue-500"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"
-                          />
-                        </svg>
-                        <p class="mb-2 text-sm text-gray-500">
-                          <span class="font-semibold">Click to upload</span> or
-                          drag and drop
-                        </p>
-                        <p class="text-xs text-gray-500">
-                          GIF, PNG, or JPG images supported
-                        </p>
-                      </div>
-                      <input
-                        id="image_file"
-                        name="image_file"
-                        type="file"
-                        class="hidden"
-                        hx-post="/upload-image"
-                        hx-target="#image-preview"
-                        hx-encoding="multipart/form-data"
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #faf9f9;
+        }
 
-              <form
-                id="valuation-form"
-                hx-post="/value"
-                hx-target="#results"
-                hx-swap="innerHTML"
-              >
-                <input
-                  type="hidden"
-                  id="image_url"
-                  name="image_url"
-                  value=""
-                  hx-trigger="load"
-                  hx-swap="none"
-                />
-                <input
-                  type="hidden"
-                  id="image_data"
-                  name="image_data"
-                  value=""
-                  hx-trigger="load"
-                  hx-swap="none"
-                />
-                <input
-                  type="hidden"
-                  id="content_type"
-                  name="content_type"
-                  value=""
-                  hx-trigger="load"
-                  hx-swap="none"
-                />
-                <div class="mb-6 mt-4">
-                  <label
-                    for="description"
-                    class="block text-gray-700 text-sm font-bold mb-2"
-                    >Description (optional):</label
-                  >
-                  <textarea
-                    id="description"
-                    name="description"
-                    rows="3"
-                    class="bg-white shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  ></textarea>
-                </div>
+        .editorial-headline {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            letter-spacing: -0.02em;
+        }
 
-                <div class="mb-6">
-                  <label
-                    for="currency"
-                    class="block text-gray-700 text-sm font-bold mb-2"
-                    >Currency:</label
-                  >
-                  <select
-                    id="currency"
-                    name="currency"
-                    class="bg-white shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  >
-                    <option value="USD">USD - US Dollar</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="GBP">GBP - British Pound</option>
-                    <option value="JPY">JPY - Japanese Yen</option>
-                    <option value="CAD">CAD - Canadian Dollar</option>
-                  </select>
-                </div>
+        .glass-effect {
+            backdrop-filter: blur(24px);
+        }
 
-                <button
-                  type="submit"
-                  id="estimate-value-button"
-                  hx-disable-element="this"
-                  class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                >
-                  Estimate Value
-                </button>
-                <button
-                  type="button"
-                  id="reset-button"
-                  class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/50 ml-2"
-                >
-                  Reset
-                </button>
-              </form>
+        .htmx-indicator {
+            display: none;
+            transition: opacity 200ms ease-in;
+            opacity: 0;
+        }
+
+        .htmx-request .htmx-indicator,
+        .htmx-request.htmx-indicator {
+            display: flex;
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-surface text-on-surface font-body selection:bg-primary-fixed selection:text-on-primary-fixed min-h-screen flex flex-col">
+    <!-- Top Navigation Bar -->
+    <nav class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl transition-all duration-300">
+        <div class="flex justify-between items-center h-20 px-12 w-full max-w-[1440px] mx-auto">
+            <div class="text-xl font-bold tracking-tighter text-[#1a1c1c]">AI Appraiser</div>
+            <div
+                class="hidden md:flex gap-8 items-center font-['Plus_Jakarta_Sans'] font-medium text-sm tracking-tight border-b-2 border-[#0051C3]">
+                <a class="text-[#0051C3] font-bold pb-1" href="javascript:void(0)"
+                    onclick="location.reload()">Appraise</a>
             </div>
-          </div>
-          <div>
-            <div class="bg-gray-50 p-6 rounded-lg h-full">
-              <h2 class="text-xl font-semibold text-gray-700 mb-4">
-                Valuation Results
-              </h2>
-              <div id="results-container" class="mt-4 rounded-lg h-full">
-                <div id="results" class="h-full">
-                  <!-- Valuation results will be displayed here -->
-                </div>
-                <div
-                  id="spinner"
-                  class="hidden absolute inset-0 flex items-center justify-center bg-gray-50/75"
-                >
-                  <div
-                    class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
+            <div class="hidden md:flex items-center gap-6"></div>
         </div>
-      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div id="main-content-area" class="flex-grow max-w-[1440px] w-full mx-auto">
+        <!-- Default State: Landing & Upload -->
+        <main class="pt-32 pb-24 px-6 md:px-12">
+            <!-- Header Section -->
+            <header class="mb-16 md:mb-24 flex flex-col items-start max-w-3xl">
+                <h1 class="editorial-headline text-5xl md:text-7xl font-extrabold text-on-surface leading-[1.1]">
+                    Discover the value of your items.</h1>
+                <p class="mt-8 text-xl text-on-surface-variant leading-relaxed font-light">
+                    Our AI Appraiser analyzes your image and description to estimate the item's value based on current search
+                    results and online information.
+                </p>
+            </header>
+
+            <!-- Main Upload Interface (Bento Style) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8" id="bento-grid-appraise">
+                <!-- Primary Upload Zone (The Canvas) -->
+                <section class="lg:col-span-8 flex flex-col relative min-h-[500px]">
+                    <div id="upload-flow-container" class="h-full relative w-full flex flex-col">
+                        <!-- Dropzone container -->
+                        <div class="dropzone-container h-full w-full flex-grow">
+                            <label for="image_file" class="block h-full cursor-pointer relative group">
+                                <div class="card flex flex-col items-center justify-center hover:bg-primary-fixed/30 hover:border-primary/20 transition-all duration-500 overflow-hidden h-full min-h-[400px]">
+                                    <div class="absolute inset-0 opacity-10 pointer-events-none">
+                                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary-container via-transparent to-transparent"></div>
+                                    </div>
+                                    <div class="flex flex-col items-center text-center relative z-10">
+                                        <div class="w-24 h-24 rounded-full bg-surface-container-lowest flex items-center justify-center mb-8 shadow-sm group-hover:scale-110 transition-transform duration-500">
+                                            <span class="material-symbols-outlined text-primary text-4xl" data-icon="upload_file">upload_file</span>
+                                        </div>
+                                        <h2 class="editorial-headline text-3xl font-bold mb-4">Submit Artifact</h2>
+                                        <p class="text-on-surface-variant text-lg font-light max-w-sm">
+                                            Drag and drop high-resolution images or <span class="text-primary font-semibold underline decoration-primary/30 underline-offset-4">browse files</span>
+                                        </p>
+                                        <p class="mt-12 micro-label opacity-50">Accepted: JPG, PNG, GIF</p>
+                                    </div>
+                                </div>
+                                <input id="image_file" name="image_file" type="file" class="hidden"
+                                    hx-post="/upload-image" hx-target="#image-preview" hx-encoding="multipart/form-data"
+                                    accept="image/*" />
+                            </label>
+                            <!-- Uploading Status Indicator -->
+                            <div id="image-upload-spinner" class="htmx-indicator absolute inset-0 rounded-[1.5rem] flex items-center justify-center bg-surface-container-low/80 backdrop-blur z-20 pointer-events-none">
+                                <div class="flex flex-col items-center">
+                                    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-primary border-r-4 border-transparent mb-4"></div>
+                                    <p class="editorial-headline text-primary font-bold">Uploading...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Image Preview Zone (Hidden initially) -->
+                        <div id="image-preview" class="hidden w-full mb-8 relative" hx-swap="none"></div>
+
+                        <!-- Valuation Form (Hidden initially) -->
+                        <form id="valuation-form" hx-post="/value" class="hidden w-full card relative mt-4">
+                            <!-- Hidden inputs for image data -->
+                            <input type="hidden" id="image_url" name="image_url" value="" />
+                            <input type="hidden" id="image_data" name="image_data" value="" />
+                            <input type="hidden" id="content_type" name="content_type" value="" />
+
+                            <!-- Analysis Status Indicator -->
+                            <div id="valuation-spinner" class="htmx-indicator absolute inset-0 rounded-[1.5rem] flex items-center justify-center bg-surface-container-low/90 backdrop-blur-md z-30 pointer-events-none">
+                                <div class="flex flex-col items-center">
+                                    <div class="animate-spin rounded-full h-20 w-20 border-t-4 border-primary border-r-4 border-transparent mb-6"></div>
+                                    <p class="editorial-headline text-2xl text-primary font-bold text-center px-4">The AI is analyzing your artifact...</p>
+                                    <p class="text-on-surface-variant mt-2 text-sm max-w-sm text-center px-4">Comparing visual signatures with our cross-referenced database of historical items and active markets.</p>
+                                </div>
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="form-label">Description (optional)</label>
+                                <textarea id="description" name="description" rows="3" class="form-input" placeholder="Add provenance, known history, or details about the item's condition..."></textarea>
+                            </div>
+                            <div class="mb-8">
+                                <label class="form-label">Currency</label>
+                                <select id="currency" name="currency" class="form-input">
+                                    <option value="USD">USD - US Dollar</option>
+                                    <option value="EUR">EUR - Euro</option>
+                                    <option value="GBP">GBP - British Pound</option>
+                                    <option value="JPY">JPY - Japanese Yen</option>
+                                    <option value="CAD">CAD - Canadian Dollar</option>
+                                </select>
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <button type="submit" id="estimate-value-button" hx-disable-element="this" class="btn-primary">
+                                    <span class="material-symbols-outlined" data-icon="hub">hub</span>
+                                    Estimate Value
+                                </button>
+                                <button type="button" id="reset-button" class="btn-secondary">
+                                    Reset
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Instructional Sidebar -->
+                <aside class="lg:col-span-4 flex flex-col gap-8 h-full">
+                    <div class="sidebar-card flex-1">
+                        <h3 class="editorial-headline text-xl font-bold mb-8">Photography Guide</h3>
+                        <div class="space-y-10">
+                            <!-- Step 01 -->
+                            <div class="flex gap-6 items-start">
+                                <span class="editorial-headline text-4xl font-extrabold text-primary/20 leading-none">01</span>
+                                <div>
+                                    <h4 class="font-bold text-on-surface mb-2">Natural Lighting</h4>
+                                    <p class="text-on-surface-variant text-sm leading-relaxed">Avoid harsh flash or direct sunlight. Soft, indirect day-light captures true colors and textures best.</p>
+                                </div>
+                            </div>
+                            <!-- Step 02 -->
+                            <div class="flex gap-6 items-start">
+                                <span class="editorial-headline text-4xl font-extrabold text-primary/20 leading-none">02</span>
+                                <div>
+                                    <h4 class="font-bold text-on-surface mb-2">Capture Details</h4>
+                                    <p class="text-on-surface-variant text-sm leading-relaxed">Ensure any maker's marks, signatures, or serial numbers are visible in the photo for precise verification.</p>
+                                </div>
+                            </div>
+                            <!-- Step 03 -->
+                            <div class="flex gap-6 items-start">
+                                <span class="editorial-headline text-4xl font-extrabold text-primary/20 leading-none">03</span>
+                                <div>
+                                    <h4 class="font-bold text-on-surface mb-2">Neutral Backdrop</h4>
+                                    <p class="text-on-surface-variant text-sm leading-relaxed">Place your item on a solid, non-reflective surface like linen or wood to help the AI isolate the object.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Secondary Action / Status Card -->
+                    <div class="bg-primary-container text-on-primary-container rounded-[1.5rem] p-8 relative overflow-hidden flex-shrink-0 shadow-lg shadow-primary/10">
+                        <div class="absolute top-0 right-0 p-4 opacity-10">
+                            <span class="material-symbols-outlined text-8xl" data-icon="travel_explore">travel_explore</span>
+                        </div>
+                        <div class="relative z-10">
+                            <h3 class="editorial-headline text-lg font-bold mb-2">Grounded in Google Search</h3>
+                            <p class="text-sm opacity-80 mb-0 leading-relaxed">Valuations are driven by Google Search results, referencing the latest available online market data.</p>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </main>
     </div>
+
+    <!-- Frontend Template for Valuation Results -->
+    <template id="result-template">
+        <main class="pt-32 pb-24 px-6 md:px-12 w-full animate-[fadeIn_0.5s_ease-out]">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+                <!-- Left Column: Image -->
+                <div class="lg:col-span-6 space-y-12">
+                    <div class="sidebar-card !p-0 overflow-hidden aspect-[4/5] flex items-center justify-center relative bg-surface-container-lowest">
+                        <img id="result-image" alt="Appraised Artifact" class="w-full h-full object-contain">
+                    </div>
+                </div>
+                
+                <!-- Right Column: Results Data -->
+                <div class="lg:col-span-6 flex flex-col gap-12 sticky top-32">
+                    <section class="space-y-4">
+                        <span class="micro-label text-primary tracking-[0.3em]">Appraisal Outcome</span>
+                        <h1 class="text-4xl md:text-5xl font-headline font-extrabold tracking-tight text-on-surface leading-tight">Digital Valuation</h1>
+                        <p class="text-on-surface-variant text-lg leading-relaxed">AI Analyzed Artifact via Gemini Engine</p>
+                    </section>
+                    
+                    <!-- Value Card -->
+                    <section class="sidebar-card space-y-6 bg-surface-container-lowest">
+                        <div class="space-y-1">
+                            <span class="micro-label">Estimated Market Value</span>
+                            <div id="result-value" class="text-6xl font-headline font-bold text-primary tracking-tighter"></div>
+                        </div>
+                    </section>
+                    
+                    <!-- Reasoning Notes -->
+                    <section class="sidebar-card space-y-6">
+                        <h3 class="micro-label flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-primary" data-icon="psychology">psychology</span>
+                            AI Curation Notes
+                        </h3>
+                        <div id="result-reasoning" class="text-sm text-on-surface-variant leading-relaxed font-body whitespace-pre-wrap"></div>
+                    </section>
+
+                    <!-- Market References -->
+                    <section id="market-references" class="space-y-4 pt-4 hidden">
+                        <h3 class="micro-label flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]" data-icon="travel_explore">travel_explore</span>
+                            Market References
+                        </h3>
+                        <div id="market-links" class="flex flex-col gap-2"></div>
+                    </section>
+
+                    <div class="pt-8 flex gap-4">
+                        <button type="button" onclick="location.reload()" class="btn-secondary w-full sm:w-auto shadow-sm">
+                            <span class="material-symbols-outlined" data-icon="refresh">refresh</span>
+                            Appraise Another
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </template>
+
     <script>
-      let imageData = null;
-      let contentType = null;
+        const defaultCurrency = 'USD';
+        let imageData = null;
+        let contentType = null;
 
-      document
-        .getElementById("valuation-form")
-        .addEventListener("htmx:beforeRequest", function () {
-          document.getElementById("spinner").classList.remove("hidden");
-        });
-
-      document
-        .getElementById("valuation-form")
-        .addEventListener("htmx:afterRequest", function (evt) {
-          document.getElementById("spinner").classList.add("hidden");
-          if (evt.detail.successful) {
-            const data = JSON.parse(evt.detail.xhr.response);
-
-            // Format the currency
-            function formatCurrency(value, currency) {
-              return new Intl.NumberFormat("en-US", {
+        function formatCurrency(value, currency) {
+            return new Intl.NumberFormat("en-US", {
                 style: "currency",
                 currency: currency,
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              }).format(value);
-            }
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            }).format(value);
+        }
 
-            const formattedValue = formatCurrency(
-              data.estimated_value,
-              data.currency
-            );
-
-            let resultsHTML = `
-                    <div class="bg-white p-4 rounded-lg shadow-md">
-                        <p class="font-semibold">Estimated Value:</p> <p class="text-2xl text-blue-600">${formattedValue}</p>
-                        <br>
-                        <p class="font-semibold">Reasoning:</p> <p class="text-sm text-gray-700">${data.reasoning}</p>`;
-
-            if (
-              data.search_urls &&
-              data.search_urls.length > 0 &&
-              data.search_urls[0] !== "N/A"
-            ) {
-              resultsHTML += `
-                        <br>
-                        <p class="font-semibold">Sources:</p>
-                        <ul class="text-sm list-disc list-inside ml-4">`;
-              data.search_urls.forEach((url) => {
-                resultsHTML += `<li><a href="${url}" target="_blank" class="text-blue-600 hover:underline">${url}</a></li>`;
-              });
-              resultsHTML += `</ul>`;
-            }
-            resultsHTML += `</div>`;
-            document.getElementById("results").innerHTML = resultsHTML;
-          }
+        document.addEventListener('DOMContentLoaded', () => {
+            const currencySelect = document.getElementById("currency");
+            if (currencySelect) currencySelect.value = defaultCurrency;
         });
 
-      document
-        .getElementById("image_file")
-        .addEventListener("htmx:afterRequest", function (evt) {
-          if (evt.detail.successful) {
-            const data = JSON.parse(evt.detail.xhr.response);
-            const preview = document.getElementById("image-preview");
-            if (data && data.data_url) {
-              // Construct the entire inner HTML, including the inner div and the image
-              preview.innerHTML = `
-                        <div id="image-preview-inner" class="border-solid border-2 border-gray-400 rounded-lg w-64 h-64 flex items-center justify-center p-0 hover:bg-gray-100 transition duration-300 bg-white">
-                            <img src="${data.data_url}" alt="Uploaded Image" class="max-w-full h-full mx-auto object-contain">
+        // Prevent htmx from auto-swapping the JSON responses
+        document.body.addEventListener('htmx:beforeSwap', (evt) => {
+            if (evt.detail.elt.id === "valuation-form" || evt.detail.elt.id === "image_file") {
+                evt.detail.shouldSwap = false;
+            }
+        });
+
+        document.body.addEventListener("htmx:afterRequest", (evt) => {
+
+            // Handle Upload Form Response
+            if (evt.detail.elt.id === "image_file" && evt.detail.successful) {
+                const data = JSON.parse(evt.detail.xhr.response);
+                const preview = document.getElementById("image-preview");
+                if (data?.data_url) {
+
+                    preview.innerHTML = `
+                        <div class="sidebar-card flex items-center justify-center border-4 border-surface-container-highest max-h-[500px] aspect-[16/10] overflow-hidden relative">
+                            <img src="${data.data_url}" alt="Uploaded Image" class="w-full h-full object-contain mix-blend-multiply">
                         </div>
                     `;
-              document.getElementById("image_url").value = data.gcs_uri;
-              imageData = data.data_url;
-              contentType = data.content_type;
-              document.getElementById("image_data").value = imageData;
-              document.getElementById("content_type").value = contentType;
 
-              // Hide the dropzone and show the preview
-              document
-                .querySelector(".dropzone-container")
-                .classList.add("hidden");
-              document
-                .getElementById("image-preview-inner")
-                .classList.remove("hidden");
-              document
-                .getElementById("image-preview-inner")
-                .classList.add("bg-white");
+                    document.getElementById("image_url").value = data.gcs_uri || "";
+                    imageData = data.data_url;
+                    contentType = data.content_type;
+                    document.getElementById("image_data").value = imageData;
+                    document.getElementById("content_type").value = contentType;
+
+                    document.querySelector(".dropzone-container").classList.add("hidden");
+                    preview.classList.remove("hidden");
+                    preview.classList.add("block");
+
+                    const valForm = document.getElementById("valuation-form");
+                    valForm.classList.remove("hidden");
+                    valForm.classList.add("block");
+
+                    valForm.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                }
             }
-          }
+
+            // Handle Valuation Form Response
+            if (evt.detail.elt.id === "valuation-form" && evt.detail.successful) {
+                const data = JSON.parse(evt.detail.xhr.response);
+
+                const formattedValue = formatCurrency(data.estimated_value, data.currency);
+
+                // Use the HTML template block
+                const template = document.getElementById('result-template').content.cloneNode(true);
+                
+                template.getElementById('result-image').src = imageData;
+                template.getElementById('result-value').textContent = formattedValue;
+                template.getElementById('result-reasoning').textContent = data.reasoning;
+
+                if (data.search_urls && data.search_urls.length > 0 && data.search_urls[0] !== "N/A") {
+                    const marketRefSection = template.getElementById('market-references');
+                    const linksContainer = template.getElementById('market-links');
+                    
+                    marketRefSection.classList.remove('hidden');
+                    
+                    data.search_urls.forEach((url) => {
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.target = "_blank";
+                        a.className = "text-xs text-primary hover:text-primary-container bg-primary-fixed/30 py-4 px-6 rounded-xl truncate transition-colors flex items-center gap-3 font-medium border border-primary/10";
+                        a.innerHTML = `<span class="material-symbols-outlined text-[18px]" data-icon="link">link</span>${url}`;
+                        linksContainer.appendChild(a);
+                    });
+                }
+
+                const contentArea = document.getElementById("main-content-area");
+                contentArea.innerHTML = '';
+                contentArea.appendChild(template);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         });
 
-      const estimateValueButton = document.getElementById(
-        "estimate-value-button"
-      );
-      if (estimateValueButton) {
-        estimateValueButton.addEventListener("click", function (event) {
-          // Prioritize sending image_data if available, otherwise send image_url
-          if (!imageData && document.getElementById("image_url").value === "") {
-            alert("Please upload an image first.");
-            event.preventDefault();
-          }
+        document.body.addEventListener("click", (e) => {
+            if (e.target && (e.target.id === "reset-button" || e.target.closest('#reset-button'))) {
+                document.getElementById("description").value = "";
+                document.getElementById("image_url").value = "";
+                document.getElementById("image_data").value = "";
+                document.getElementById("content_type").value = "";
+
+                document.getElementById("image-preview").innerHTML = "";
+                document.getElementById("image-preview").classList.add("hidden");
+                document.getElementById("valuation-form").classList.add("hidden");
+
+                document.querySelector(".dropzone-container").classList.remove("hidden");
+
+                imageData = null;
+                contentType = null;
+                const currencySelect = document.getElementById("currency");
+                if (currencySelect) currencySelect.value = defaultCurrency;
+            }
         });
-      }
-
-      const resetButton = document.getElementById("reset-button");
-      if (resetButton) {
-        resetButton.addEventListener("click", function () {
-          // Clear the description field
-          document.getElementById("description").value = "";
-
-          // Reset the image preview
-          document.getElementById("image-preview").innerHTML = `
-              <div id="image-preview-inner" class="border-dashed border-2 border-blue-400 rounded-lg w-96 h-96 flex items-center justify-center hover:bg-gray-100 transition hidden">
-                <span class="text-gray-500 text-sm">Image Preview</span>
-              </div>
-            `;
-
-          // Clear hidden input fields
-          document.getElementById("image_url").value = "";
-          document.getElementById("image_data").value = "";
-          document.getElementById("content_type").value = "";
-
-          // Show the dropzone
-          document
-            .querySelector(".dropzone-container")
-            .classList.remove("hidden");
-
-          // Reset imageData and contentType
-          imageData = null;
-          contentType = null;
-
-          // Clear valuation results
-          document.getElementById("results").innerHTML = "";
-
-          // Reset the currency selection
-          document.getElementById("currency").value = defaultCurrency;
-        });
-      }
     </script>
-  </body>
+</body>
 </html>
