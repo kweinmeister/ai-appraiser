@@ -25,8 +25,8 @@ logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
-LOCATION = os.environ.get("LOCATION", "us-central1")
-MODEL_ID = os.environ.get("MODEL_ID", "gemini-2.5-flash")
+LOCATION = os.environ.get("LOCATION", "global")
+MODEL_ID = os.environ.get("MODEL_ID", "gemini-3-flash-preview")
 STORAGE_BUCKET = os.environ.get("STORAGE_BUCKET")
 DEFAULT_CURRENCY = os.environ.get(
     "CURRENCY",
@@ -265,7 +265,7 @@ async def upload_image(
 
 @app.post("/value", response_model=ValuationResponse)
 async def estimate_item_value(
-    description: Annotated[str, Form()],
+    description: Annotated[str, Form()] = "",
     image_url: Annotated[str | None, Form()] = None,
     image_data: Annotated[str | None, Form()] = None,
     content_type: Annotated[str | None, Form()] = None,
