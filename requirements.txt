@@ -5,6 +5,6 @@ google-genai==1.69.0
 uvicorn==0.42.0
 pydantic==2.12.5
 python-dotenv==1.2.2
-python-multipart==0.0.22
+python-multipart==0.0.24
 pytest==9.0.2
 werkzeug==3.1.7
