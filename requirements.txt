@@ -2,7 +2,7 @@ fastapi[standard]==0.135.2
 freezegun==1.5.5
 google-cloud-storage==3.10.1
 google-genai==1.69.0
-uvicorn==0.42.0
+uvicorn==0.43.0
 pydantic==2.12.5
 python-dotenv==1.2.2
 python-multipart==0.0.22
