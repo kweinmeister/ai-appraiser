@@ -7,4 +7,4 @@ pydantic==2.12.5
 python-dotenv==1.2.2
 python-multipart==0.0.22
 pytest==9.0.2
-werkzeug==3.1.7
+werkzeug==3.1.8
