@@ -20,7 +20,7 @@ from main import (
 
 
 def create_mock_gemini_responses(
-    valuation_text="Some valuation text",
+    valuation_text: str = "Some valuation text",
     parsing_response_text: str | None = None,
     parsing_response_dict: dict | None = None,
     error: Exception | None = None,
@@ -484,7 +484,9 @@ def test_value_endpoint_estimate_value_exception(
         },
     )
     assert response.status_code == 500
-    assert response.json() == {"detail": "An internal error occurred during valuation."}
+    assert response.json() == {
+        "detail": "An internal error occurred during valuation: Something went wrong"
+    }
     mock_estimate_value.assert_called_once()
 
 
@@ -495,7 +497,7 @@ def test_value_endpoint_no_image_provided(mock_google_cloud_clients_and_app) -> 
     assert response.json() == {"detail": "Either image_url or image_data is required."}
 
 
-def _assert_html_contains_currency(response, currency) -> None:
+def _assert_html_contains_currency(response, currency: str) -> None:
     """Helper to check for currency in the root HTML response."""
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]

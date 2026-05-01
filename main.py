@@ -290,7 +290,8 @@ async def estimate_item_value(
             except Exception as e:
                 # Raise 400 on malformed image_data
                 raise HTTPException(
-                    status_code=400, detail="Invalid image_data format.",
+                    status_code=400,
+                    detail="Invalid image_data format.",
                 ) from e
 
         response_data = estimate_value(
@@ -302,12 +303,21 @@ async def estimate_item_value(
             currency=currency,
         )
         return JSONResponse(content=response_data.model_dump())
-    except Exception:
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logging.warning("Valuation error: %s", str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Valuation error: {str(e)}",
+        ) from e
+    except Exception as e:
         logging.exception("Internal server error in /value")
+        error_message = str(e) if str(e) else "An unknown error occurred"
         raise HTTPException(
             status_code=500,
-            detail="An internal error occurred during valuation.",
-        )
+            detail=f"An internal error occurred during valuation: {error_message}",
+        ) from e
 
 
 @app.get("/", response_class=HTMLResponse)
