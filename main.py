@@ -308,15 +308,14 @@ async def estimate_item_value(
     except ValueError as e:
         logging.warning("Valuation error: %s", str(e))
         raise HTTPException(
-            status_code=400,
-            detail=f"Valuation error: {str(e)}",
+            status_code=500,
+            detail="An internal error occurred during valuation.",
         ) from e
     except Exception as e:
         logging.exception("Internal server error in /value")
-        error_message = str(e) if str(e) else "An unknown error occurred"
         raise HTTPException(
             status_code=500,
-            detail=f"An internal error occurred during valuation: {error_message}",
+            detail="An internal error occurred during valuation.",
         ) from e
 
 

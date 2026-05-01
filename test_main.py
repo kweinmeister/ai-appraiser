@@ -484,10 +484,27 @@ def test_value_endpoint_estimate_value_exception(
         },
     )
     assert response.status_code == 500
-    assert response.json() == {
-        "detail": "An internal error occurred during valuation: Something went wrong"
-    }
+    assert response.json() == {"detail": "An internal error occurred during valuation."}
     mock_estimate_value.assert_called_once()
+
+
+@patch("main.estimate_value")
+def test_value_endpoint_value_error_returns_500(
+    mock_estimate_value,
+    mock_google_cloud_clients_and_app,
+) -> None:
+    client, _, _ = mock_google_cloud_clients_and_app
+    mock_estimate_value.side_effect = ValueError("Internal valuation failed")
+    response = client.post(
+        "/value",
+        data={
+            "description": "A test item",
+            "image_data": "data:image/jpeg;base64,ZmFrZSBpbWFnZSBjb250ZW50",
+            "content_type": "image/jpeg",
+        },
+    )
+    assert response.status_code == 500
+    assert response.json() == {"detail": "An internal error occurred during valuation."}
 
 
 def test_value_endpoint_no_image_provided(mock_google_cloud_clients_and_app) -> None:
