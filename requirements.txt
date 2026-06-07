@@ -3,7 +3,7 @@ freezegun==1.5.5
 google-cloud-storage==3.10.1
 google-genai==1.74.0
 pydantic==2.13.4
-pyOpenSSL==26.1.0
+pyOpenSSL==26.2.0
 pytest==9.0.3
 python-dotenv==1.2.2
 python-multipart==0.0.27
