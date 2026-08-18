@@ -97,5 +97,5 @@ The tests cover the core functionality of the application, including image uploa
 
 - **`GOOGLE_CLOUD_PROJECT`**: (Required) Your Google Cloud project ID.
 - **`LOCATION`**: (Optional) The Google Cloud region to use. Defaults to `us-central1`.
-- **`MODEL_ID`**: (Optional) The ID of the Gemini model to use. Defaults to `gemini-2.5-flash`.
+- **`MODEL_ID`**: (Optional) The ID of the Gemini model to use. Defaults to `gemini-3.7-flash`.
 - **`STORAGE_BUCKET`**: (Optional) The name of your Google Cloud Storage bucket for image uploads. If not set, image uploads to GCS will be skipped.
