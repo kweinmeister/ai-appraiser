@@ -26,7 +26,7 @@ load_dotenv()
 
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
 LOCATION = os.environ.get("LOCATION", "global")
-MODEL_ID = os.environ.get("MODEL_ID", "gemini-3-flash-preview")
+MODEL_ID = os.environ.get("MODEL_ID", "gemini-3.7-flash")
 STORAGE_BUCKET = os.environ.get("STORAGE_BUCKET")
 DEFAULT_CURRENCY = os.environ.get(
     "CURRENCY",
