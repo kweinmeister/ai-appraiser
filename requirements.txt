@@ -5,7 +5,7 @@ google-genai==2.18.1
 pydantic==2.13.4
 pyOpenSSL==26.4.0
 pytest==9.1.1
-python-dotenv==1.2.2
+python-dotenv==1.2.3
 python-multipart==0.0.32
 uvicorn==0.52.3
 werkzeug==3.1.8
