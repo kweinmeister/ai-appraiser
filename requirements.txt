@@ -2,7 +2,7 @@ fastapi[standard]==0.162.0
 freezegun==1.5.5
 google-cloud-storage==3.17.1
 google-genai==3.0.0
-pydantic==2.14.2
+pydantic==2.14.3
 pyOpenSSL==26.4.0
 pytest==9.2.0
 python-dotenv==1.2.4
