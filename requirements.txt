@@ -4,7 +4,7 @@ google-cloud-storage==3.17.1
 google-genai==3.0.0
 pydantic==2.14.2
 pyOpenSSL==26.4.0
-pytest==9.1.1
+pytest==9.2.0
 python-dotenv==1.2.4
 python-multipart==0.0.32
 uvicorn==0.54.0
